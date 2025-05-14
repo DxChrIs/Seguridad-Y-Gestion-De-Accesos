@@ -194,26 +194,11 @@
     - name: Configurar política de bloqueo de cuenta - restablecer contador
       win_shell: net accounts /lockoutwindow:15
 
-    - name: Configurar Auditoría de inicio/cierre de sesión
-      win_audit_policy_system:
-        subcategory: Logon
-        audit_type: Success,Failure
-
-    - name: Configurar Auditoría de acceso a objetos (Archivos)
-      win_audit_policy_system:
-        subcategory: File System
-        audit_type: Success,Failure
-
     - name: Establecer usuarios con denegación de inicio de sesión interactivo
       ansible.windows.win_user_right:
         name: SeDenyInteractiveLogonRight
         users:
           - "User1"
-
-    - name: Configurar auditoría de acceso a cuentas de usuario
-      win_audit_policy_system:
-        subcategory: Special Logon
-        audit_type: Success,Failure
 
     - name: Configurar máxima expiración de contraseña
       win_shell: net accounts /maxpwage:60
@@ -223,3 +208,21 @@
         name: "user1"
         password_never_expires: yes
         state: present
+
+    - name: Crear una GPO para no permitir a los usuarios acceder al CMD
+      win_shell: |
+        New-GPO -Name "Bloquear CMD" -Comment "Restringe el acceso al simbolo del sistema a los empleados"
+
+    - name: Configurar la GPO para bloquear el CMD
+      win_shell: |
+        Set-GPRegistryValue -Name "Bloquear CMD" `
+          -Key "HKCU\Software\Policies\Microsoft\Windows\System" `
+          -ValueName "DisableCMD" `
+          -Type DWord `
+          -Value 1
+    
+    - name: Vincular la GPO "Bloquear CMD" a la OU "Empleados"
+      win_shell: |
+        New-GPLink -Name "Bloquear CMD" `
+          -Target "OU=Empleado,DC=chrisyjaime,DC=com,DC=mx" `
+          -Enforced Yes
