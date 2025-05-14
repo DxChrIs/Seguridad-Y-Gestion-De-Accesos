@@ -1,0 +1,7 @@
+{
+    "source": ["aws.elb"],
+    "detail-type": ["AWS API Call via CloudTrail"],
+    "detail": {
+        "eventSource": ["elb.amazonaws.com"]
+    }
+}

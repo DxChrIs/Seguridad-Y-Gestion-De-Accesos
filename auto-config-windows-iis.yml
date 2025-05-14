@@ -1,0 +1,188 @@
+---
+- name: Instalar y configurar IIS en Windows Server 2022 con HTTP, seguridad, logs y auditoría
+  hosts: windows
+  gather_facts: no
+  become: yes
+
+  vars:
+    site_name: "MiSitio"
+    site_port: 80
+    site_path: "C:\\inetpub\\wwwroot\\MiSitio"
+    backup_dir: "C:\\IISBackup"
+    logs_dir: "C:\\inetpub\\logs\\LogFiles\\MiSitio"
+    username: "adminuser"
+    password: "P@ssw0rd123"
+    group_name: "IISAdmins"
+
+  tasks:
+    - name: Instalar funciones requeridas para IIS y compatibilidad web
+      win_feature:
+        name:
+          - Web-Server
+          - Web-WebServer
+          - Web-Common-Http
+          - Web-Default-Doc
+          - Web-Static-Content
+          - Web-Http-Errors
+          - Web-Http-Logging
+          - Web-Security
+        state: present
+        include_management_tools: yes
+
+    - name: Crear carpeta para el sitio web
+      win_file:
+        path: "{{ site_path }}"
+        state: directory
+
+    - name: Agregar página de bienvenida personalizada
+      win_copy:
+        content: |
+          <html>
+            <head><title>Bienvenido</title></head>
+            <body>
+              <h1>MiSitio corriendo en IIS sobre Windows Server 2022</h1>
+              <p>Conexión segura mediante HTTP en el puerto 80</p>
+            </body>
+          </html>
+        dest: "{{ site_path }}\\index.html"
+
+    - name: Verificar si el sitio ya existe
+      win_shell: |
+        Import-Module WebAdministration
+        if (Test-Path "IIS:\Sites\{{ site_name }}") { exit 0 } else { exit 1 }
+      register: sitio_existente
+      ignore_errors: true
+
+    - name: Crear nuevo sitio web en IIS
+      win_iis_website:
+        name: "{{ site_name }}"
+        state: started
+        port: "{{ site_port }}"
+        physical_path: "{{ site_path }}"
+        hostname: ""
+        ip: "*"
+      when: sitio_existente.rc != 0
+
+    - name: Asegurar que el servicio de IIS está iniciado
+      win_service:
+        name: W3SVC
+        start_mode: auto
+        state: started
+
+    - name: Permitir tráfico HTTP en el firewall de Windows
+      win_firewall_rule:
+        name: "Permitir HTTP para IIS"
+        localport: "{{ site_port }}"
+        action: allow
+        direction: in
+        protocol: TCP
+        state: present
+
+    - name: Configurar la auditoría de IIS
+      win_audit_policy_system:
+        audit_type: Success,Failure
+        subcategory: Logon
+
+    - name: Configurar políticas de auditoría de acceso a archivos
+      win_audit_policy_system:
+        audit_type: Success,Failure
+        subcategory: File System
+
+    - name: Asegurarse de que la carpeta de backup de IIS existe
+      win_file:
+        path: "C:\\IISBackup"
+        state: directory
+
+    - name: Verificar si el backup ya existe
+      win_shell: |
+        if (Test-Path "C:\Windows\System32\inetsrv\backup\Backup_$(Get-Date -Format 'yyyyMMdd')") { exit 0 } else { exit 1 }
+      register: backup_existe
+      args:
+        executable: powershell
+      ignore_errors: true
+    
+    - name: Crear un backup de la configuración de IIS
+      win_shell: |
+        C:\Windows\System32\inetsrv\appcmd.exe add backup "Backup_$(Get-Date -Format 'yyyyMMdd')"
+      args:
+        executable: powershell
+      when: backup_existe.rc != 0
+
+    - name: Copiar backup a la carpeta definida
+      win_shell: |
+        $today = Get-Date -Format 'yyyyMMdd'
+        Copy-Item "C:\Windows\System32\inetsrv\backup\Backup_$today" -Destination "C:\IISBackup\Backup_$today" -Recurse
+      args:
+        executable: powershell
+      when: backup_existe.rc != 0
+
+    - name: Crear grupo de seguridad para administradores de IIS
+      win_group:
+        name: "{{ group_name }}"
+        state: present
+
+    - name: Crear usuario administrativo para IIS
+      win_user:
+        name: "{{ username }}"
+        password: "{{ password }}"
+        state: present
+        groups:
+          - Administrators
+          - "{{ group_name }}"
+
+    - name: Verificar que el servicio de IIS está en ejecución
+      win_service:
+        name: W3SVC
+        state: started
+
+    - name: Configurar el registro de logs en IIS (binding)
+      win_iis_webbinding:
+        name: "{{ site_name }}"
+        state: present
+        ip: "*"
+        port: 80
+        protocol: "http"
+
+    - name: Crear carpeta para scripts de monitoreo
+      win_file:
+        path: "C:\\inetpub\\scripts"
+        state: directory
+
+    - name: Crear un script de monitoreo para verificar el estado del sitio
+      win_copy:
+        content: |
+          $status = Invoke-WebRequest -Uri "http://localhost" -UseBasicParsing
+          if ($status.StatusCode -eq 200) {
+            Write-Output "El sitio web está funcionando correctamente."
+          } else {
+            Write-Output "Error al acceder al sitio web."
+          }
+        dest: "C:\\inetpub\\scripts\\check_website.ps1"
+
+    - name: Ejecutar el script de monitoreo para asegurar que el sitio web está funcionando
+      win_shell: "powershell -ExecutionPolicy Bypass -File C:\\inetpub\\scripts\\check_website.ps1"
+
+    - name: Crear regla de firewall para permitir la ejecución del script
+      win_firewall_rule:
+        name: "Permitir PowerShell remoto"
+        program: "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+        localport: 80
+        action: allow
+        direction: in
+        protocol: TCP
+        state: present
+
+    - name: Configurar registro de logs detallados de IIS (PowerShell)
+      win_shell: |
+        Import-Module WebAdministration
+        Set-ItemProperty "IIS:\Sites\{{ site_name }}" -Name logFile.directory -Value "{{ logs_dir }}"
+        Set-ItemProperty "IIS:\Sites\{{ site_name }}" -Name logFile.period -Value Daily
+        Set-ItemProperty "IIS:\Sites\{{ site_name }}" -Name logFile.logFormat -Value W3C
+      args:
+        executable: powershell
+
+  handlers:
+    - name: Reiniciar IIS
+      win_service:
+        name: W3SVC
+        state: restarted

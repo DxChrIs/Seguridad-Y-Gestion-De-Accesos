@@ -1,0 +1,225 @@
+---
+- name: Configurar y asegurar Active Directory en Windows Server 2022
+  hosts: windows
+  gather_facts: no
+
+  collections:
+    - ansible.windows
+    - community.windows
+    - microsoft.ad
+
+  vars:
+    domain_name: "chrisyjaime.com.mx"
+    password_policy_min_length: 8
+    password_policy_history: 5
+    password_policy_complexity: true
+
+  tasks:
+    - name: Crear Organizational Unit (OU) para Empleados
+      microsoft.ad.ou:
+        name: "Empleados"
+        path: "DC=chrisyjaime,DC=com,DC=mx"
+        state: present
+
+    - name: Crear Organizational Unit (OU) para Soporte Tecnico
+      microsoft.ad.ou:
+        name: "Soporte Tecnico"
+        path: "DC=chrisyjaime,DC=com,DC=mx"
+        state: present
+
+    - name: Crear Organizational Unit (OU) para Manager
+      microsoft.ad.ou:
+        name: "Manager"
+        path: "DC=chrisyjaime,DC=com,DC=mx"
+        state: present
+
+    - name: Crear Organizational Unit (OU) para IT
+      microsoft.ad.ou:
+        name: "IT"
+        path: "DC=chrisyjaime,DC=com,DC=mx"
+        state: present
+
+    - name: Crear grupo global "Empleados"
+      microsoft.ad.group:
+        name: "Empleados"
+        scope: "global"
+        state: present
+
+    - name: Crear grupo global "ITAdmins"
+      microsoft.ad.group:
+        name: "ITAdmins"
+        scope: "global"
+        state: present
+        members:
+          add:
+            - "administrator"
+
+    - name: Crear grupo universal "Managers"
+      microsoft.ad.group:
+        name: "Managers"
+        scope: "universal"
+        state: present
+        members:
+          add:
+            - "administrator"
+
+    - name: Crear grupo "DomainLocal" y asignar permisos a los grupos globales
+      microsoft.ad.group:
+        name: "LocalUsers"
+        scope: "domainlocal"
+        state: present
+        members:
+          add:
+            - "Empleados"
+            - "ITAdmins"
+
+    - name: Crear usuario "user1" en AD
+      microsoft.ad.user:
+        name: "user1"
+        firstname: "User"
+        surname: "One"
+        email: "user1@chrisyjaime.com.mx"
+        password: "P@ssw0rd123"
+        upn: "user1@chrisyjaime.com.mx"
+        state: present
+        enabled: true
+        user_cannot_change_password: no
+        groups:
+          add:
+            - "Empleados"
+
+    - name: Crear usuario "user2" en AD
+      microsoft.ad.user:
+        name: "user2"
+        firstname: "User"
+        surname: "Two"
+        email: "user2@chrisyjaime.com.mx"
+        password: "SecurePassword456"
+        upn: "user2@chrisyjaime.com.mx"
+        state: present
+        enabled: true
+        user_cannot_change_password: no
+        password_never_expires: no
+        groups:
+          add:
+            - "ITAdmins"
+
+    - name: Crear usuario "user3" en AD
+      microsoft.ad.user:
+        name: "user3"
+        firstname: "User"
+        surname: "Three"
+        email: "user3@chrisyjaime.com.mx"
+        password: "P@ssW0rd1234"
+        upn: "user3@chrisyjaime.com.mx"
+        state: present
+        enabled: true
+        user_cannot_change_password: no
+        password_never_expires: no
+        groups:
+          add:
+            - "Managers"
+
+    - name: Crear usuario para OU Empleados
+      microsoft.ad.user:
+        name: "Pedro Perez"
+        firstname: "Pedro"
+        surname: "Perez"
+        email: "pedro.perez@chrisyjaime.com.mx"
+        password: "PerezPAssWord123"
+        upn: "pedro.perez@chrisyjaime.com.mx"
+        state: present
+        enabled: true
+        path: "OU=Empleados,DC=chrisyjaime,DC=com,DC=mx"
+        user_cannot_change_password: no
+        password_never_expires: no
+        groups:
+          add:
+            - "Empleados"
+
+    - name: Crear usuario para OU IT
+      microsoft.ad.user:
+        name: "Juan Paramo"
+        firstname: "Juan"
+        surname: "Paramo"
+        email: "juan.paramo@chrisyjaime.com.mx"
+        password: "ParamoPAssWord123"
+        upn: "juan.paramo@chrisyjaime.com.mx"
+        state: present
+        enabled: true
+        path: "OU=IT,DC=chrisyjaime,DC=com,DC=mx"
+        user_cannot_change_password: no
+        password_never_expires: no
+        groups:
+          add:
+            - "ITAdmins"
+
+    - name: Crear usuario para OU Manager
+      microsoft.ad.user:
+        name: "Alberto Rojas"
+        firstname: "Alberto"
+        surname: "Rojas"
+        email: "alberto.rojas@chrisyjaime.com.mx"
+        password: "RojasPAssWord123"
+        upn: "alberto.rojas@chrisyjaime.com.mx" #UPN PARA LDAP
+        state: present
+        enabled: true
+        path: "OU=Manager,DC=chrisyjaime,DC=com,DC=mx"
+        user_cannot_change_password: no
+        password_never_expires: no
+        groups:
+          add:
+            - "Managers"
+
+    - name: Configurar política de longitud mínima de contraseña
+      win_shell: net accounts /minpwlen:{{ password_policy_min_length }}
+
+    - name: Configurar historial de contraseñas
+      win_shell: net accounts /uniquepw:{{ password_policy_history }}
+
+    - name: Habilitar complejidad de contraseñas
+      win_regedit:
+        path: HKLM:\SYSTEM\CurrentControlSet\Control\Lsa
+        name: PasswordComplexity
+        data: 1
+        type: dword
+        state: present
+
+    - name: Configurar política de bloqueo de cuenta - intentos fallidos
+      win_shell: net accounts /lockoutthreshold:5
+
+    - name: Configurar política de bloqueo de cuenta - duración
+      win_shell: net accounts /lockoutduration:15
+
+    - name: Configurar política de bloqueo de cuenta - restablecer contador
+      win_shell: net accounts /lockoutwindow:15
+
+    - name: Configurar Auditoría de inicio/cierre de sesión
+      win_audit_policy_system:
+        subcategory: Logon
+        audit_type: Success,Failure
+
+    - name: Configurar Auditoría de acceso a objetos (Archivos)
+      win_audit_policy_system:
+        subcategory: File System
+        audit_type: Success,Failure
+
+    - name: Establecer usuarios con denegación de inicio de sesión interactivo
+      ansible.windows.win_user_right:
+        name: SeDenyInteractiveLogonRight
+        users:
+          - "User1"
+
+    - name: Configurar auditoría de acceso a cuentas de usuario
+      win_audit_policy_system:
+        subcategory: Special Logon
+        audit_type: Success,Failure
+
+    - name: Configurar máxima expiración de contraseña
+      win_shell: net accounts /maxpwage:60
+
+    - name: Establecer que la contraseña de user1 nunca expire
+      microsoft.ad.user:
+        name: "user1"
+        password_never_expires: yes
+        state: present

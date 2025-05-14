@@ -1,0 +1,148 @@
+---
+- name: Configurar servidor de archivos en Windows Server 2022 con Active Directory
+  hosts: windows
+  gather_facts: no
+
+  collections:
+    - ansible.windows
+    - community.windows
+    - microsoft.ad
+
+  vars:
+    shared_folder_path: 'C:\Compartido'
+    share_name: "Publico"
+    share_description: "Carpeta pública para compartir archivos"
+    admin_group: "Administrators"
+    file_audit_group: "FileAuditors"
+    restricted_group: "RestrictedAccess"
+    users:
+      - name: "user1"
+        full_name: "User One"
+        password: "SecurePassword123"
+        group: "Users"
+      - name: "user2"
+        full_name: "User Two"
+        password: "SecurePassword456"
+        group: "Users"
+
+  tasks:
+    - name: Instalar File Server
+      ansible.windows.win_feature:
+        name: FS-FileServer
+        state: present
+        include_management_tools: yes
+
+    - name: Crear carpeta compartida
+      ansible.windows.win_file:
+        path: "{{ shared_folder_path }}"
+        state: directory
+
+    - name: Crear recurso compartido "Publico"
+      ansible.windows.win_share:
+        name: "{{ share_name }}"
+        path: "{{ shared_folder_path }}"
+        description: "{{ share_description }}"
+        full: "{{ admin_group }}"
+        read: "Everyone"
+
+    - name: Crear grupo de seguridad para auditoría de archivos
+      microsoft.ad.group:
+        name: "{{ file_audit_group }}"
+        scope: global
+        state: present
+
+    - name: Verificar si el usuario user1 ya existe
+      ansible.windows.win_shell: |
+        if (Get-ADUser -Filter {SamAccountName -eq '{{ users[0].name }}'}) { exit 0 } else { exit 1 }
+      register: user1_check
+      ignore_errors: true
+
+    - name: Crear usuario user1 en Active Directory si no existe
+      ansible.windows.win_shell: |
+        $Password = ConvertTo-SecureString "{{ users[0].password }}" -AsPlainText -Force
+        New-ADUser -Name "{{ users[0].name }}" `
+                  -SamAccountName "{{ users[0].name }}" `
+                  -GivenName "{{ users[0].full_name.split(' ')[0] }}" `
+                  -Surname "{{ users[0].full_name.split(' ')[1] }}" `
+                  -AccountPassword $Password `
+                  -Enabled $true `
+                  -Path "CN=Users,DC=chrisyjaime,DC=com,DC=mx"
+      when: user1_check.rc != 0
+
+    - name: Verificar si el usuario user2 ya existe
+      ansible.windows.win_shell: |
+        if (Get-ADUser -Filter {SamAccountName -eq '{{ users[1].name }}'}) { exit 0 } else { exit 1 }
+      register: user2_check
+      ignore_errors: true
+
+    - name: Crear usuario user2 en Active Directory si no existe
+      ansible.windows.win_shell: |
+        $Password = ConvertTo-SecureString "{{ users[1].password }}" -AsPlainText -Force
+        New-ADUser -Name "{{ users[1].name }}" `
+                  -SamAccountName "{{ users[1].name }}" `
+                  -GivenName "{{ users[1].full_name.split(' ')[0] }}" `
+                  -Surname "{{ users[1].full_name.split(' ')[1] }}" `
+                  -AccountPassword $Password `
+                  -Enabled $true `
+                  -Path "CN=Users,DC=chrisyjaime,DC=com,DC=mx"
+      when: user2_check.rc != 0
+
+    - name: Asignar permisos de control total a Administrators
+      ansible.windows.win_acl:
+        path: "{{ shared_folder_path }}"
+        user: "{{ admin_group }}"
+        rights: FullControl
+        type: allow
+        state: present
+
+    - name: Asignar permisos de lectura a FileAuditors
+      ansible.windows.win_acl:
+        path: "{{ shared_folder_path }}"
+        user: "{{ file_audit_group }}"
+        rights: Read
+        type: allow
+        state: present
+
+    - name: Crear grupo de acceso restringido "RestrictedAccess"
+      microsoft.ad.group:
+        name: "{{ restricted_group }}"
+        scope: global
+        state: present
+
+    - name: Agregar usuario1 al grupo "RestrictedAccess"
+      microsoft.ad.group:
+        name: "{{ restricted_group }}"
+        members:
+          add:
+            - user1
+
+    - name: Asignar permisos de lectura a "RestrictedAccess"
+      ansible.windows.win_acl:
+        path: "{{ shared_folder_path }}"
+        user: "{{ restricted_group }}"
+        rights: Read
+        type: allow
+        state: present
+
+    - name: Crear carpeta de destino para backups
+      ansible.windows.win_file:
+        path: 'C:\Backup'
+        state: directory
+
+    - name: Crear script de backup de la carpeta compartida
+      ansible.windows.win_copy:
+        content: |
+          @echo off
+          robocopy "{{ shared_folder_path }}" "C:\Backup" /E /COPYALL /R:5 /W:5
+          echo Backup completado el %date% %time% >> "C:\Backup\backup_log.txt"
+        dest: 'C:\Backup\Backup_Script.bat'
+
+    - name: Crear tarea programada para realizar backup de la carpeta compartida
+      community.windows.win_scheduled_task:
+        name: "Backup_Carpeta_Compartida"
+        actions:
+          - path: 'C:\Backup\Backup_Script.bat'
+        triggers:
+          - type: daily
+            start_boundary: '2025-04-22T02:00:00'
+        state: present
