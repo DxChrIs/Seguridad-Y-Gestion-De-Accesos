@@ -35,15 +35,6 @@ resource "aws_subnet" "public_subnet1" {
     }
 }
 
-resource "aws_subnet" "public_subnet2" {
-    vpc_id            = aws_vpc.main.id
-    cidr_block        = "10.0.16.0/24"
-    availability_zone = "${var.region}b"
-    tags = {
-        Name = "subnet-public-2-${var.region}"
-    }
-}
-
 #############################################
 #            Internet Gateway               #
 #############################################
@@ -78,19 +69,13 @@ resource "aws_route_table_association" "public_subnet1_association" {
     route_table_id = aws_route_table.public_route_table.id
 }
 
-resource "aws_route_table_association" "public_subnet2_association" {
-    subnet_id      = aws_subnet.public_subnet2.id
-    route_table_id = aws_route_table.public_route_table.id
-}
-
 #############################################
 #               Network ACL                 #
 #############################################
 resource "aws_network_acl" "public_acl" {
     vpc_id     = aws_vpc.main.id
     subnet_ids = [
-        aws_subnet.public_subnet1.id,
-        aws_subnet.public_subnet2.id
+        aws_subnet.public_subnet1.id
     ]
     tags = {
         Name = "acl-public-${var.region}"
@@ -449,7 +434,7 @@ resource "aws_instance" "windows_control_node" {
     instance_type = var.instance_type
     key_name = var.key_name
 
-    subnet_id = aws_subnet.public_subnet2.id
+    subnet_id = aws_subnet.public_subnet1.id
     security_groups = [aws_security_group.windows_access.id]
     associate_public_ip_address = true
 
@@ -629,7 +614,7 @@ resource "aws_autoscaling_group" "iis_windows_asg" {
     health_check_type   = "EC2"
     health_check_grace_period = 300
 
-    vpc_zone_identifier = [aws_subnet.public_subnet2.id]
+    vpc_zone_identifier = [aws_subnet.public_subnet1.id]
 
     launch_template {
         id      = aws_launch_template.iis_windows_template.id
@@ -670,7 +655,7 @@ resource "aws_autoscaling_group" "ad_windows_asg" {
     health_check_type   = "EC2"
     health_check_grace_period = 300
 
-    vpc_zone_identifier = [aws_subnet.public_subnet2.id]
+    vpc_zone_identifier = [aws_subnet.public_subnet1.id]
 
     launch_template {
         id      = aws_launch_template.ad_windows_template.id
@@ -711,7 +696,7 @@ resource "aws_autoscaling_group" "file_windows_asg" {
     health_check_type   = "EC2"
     health_check_grace_period = 300
 
-    vpc_zone_identifier = [aws_subnet.public_subnet2.id]
+    vpc_zone_identifier = [aws_subnet.public_subnet1.id]
 
     launch_template {
         id      = aws_launch_template.file_windows_template.id
