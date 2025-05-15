@@ -2,7 +2,7 @@ provider "aws" {
     region = var.region
 }
 locals {
-    instance_name  = "autodeployment-srv-project"
+    instance_name  = "security-control-access-project"
     vpc_cidr       = "10.0.0.0/16"
     azs            = slice(data.aws_availability_zones.available.names, 0, 2)
 }
@@ -232,23 +232,7 @@ resource "aws_network_acl_rule" "outbound_icmp" {
 resource "aws_security_group" "windows_access" {
     vpc_id      = aws_vpc.main.id
     name        = "windows-${var.region}-sg"
-    description = "Allow winRM, RDP, SSH, HTTPS, HTTP access"
-
-    ingress {
-        description = "WinRM access"
-        from_port   = 5985      # WinRM HTTP
-        to_port     = 5985
-        protocol    = "tcp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    ingress {
-        description = "RDP access"
-        from_port   = 3389
-        to_port     = 3389
-        protocol    = "tcp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
+    description = "Allow SSH, HTTPS, HTTP access"
 
     ingress {
         description = "SSH access for Ansible playbooks"
