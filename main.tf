@@ -2,7 +2,7 @@ provider "aws" {
     region = var.region
 }
 locals {
-    instance_name  = "security-control-access-project"
+    instance_name  = "security-access-project"
     vpc_cidr       = "10.0.0.0/16"
     azs            = slice(data.aws_availability_zones.available.names, 0, 2)
 }
