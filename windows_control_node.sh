@@ -24,8 +24,8 @@ ansible-galaxy collection install community.windows --force
 
 # Clonar el repositorio de Git
 cd /home/ubuntu
-git clone https://github.com/DxChrIs/Gestion-y-Automatizacion-de-Servidores.git
-cd Gestion-y-Automatizacion-de-Servidores
+git clone https://github.com/DxChrIs/Seguridad-Y-Gestion-De-Accesos.git
+cd Seguridad-Y-Gestion-De-Accesos
 
 # Obtener el ID de la instancia
 INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
