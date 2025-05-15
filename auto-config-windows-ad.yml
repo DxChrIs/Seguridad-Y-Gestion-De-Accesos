@@ -227,9 +227,9 @@
           -Target "OU=Empleados,DC=chrisyjaime,DC=com,DC=mx" `
           -Enforced Yes
 
-    - name: Crear una GPO para no permitir a los usuarios acceder al Panel de Control
-      win_shell: |
-        New-GPO -Name "Bloquear Panel de Control" -Comment "Restringe el acceso al panel de control a los empleados"
+    # - name: Crear una GPO para no permitir a los usuarios acceder al Panel de Control
+    #   win_shell: |
+    #     New-GPO -Name "Bloquear Panel de Control" -Comment "Restringe el acceso al panel de control a los empleados"
     
     # - name: Configurar la GPO para bloquear el Panel de Control
     #   win_shell: |
