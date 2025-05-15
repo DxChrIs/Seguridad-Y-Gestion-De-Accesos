@@ -168,18 +168,6 @@ resource "aws_network_acl_rule" "inbound_icmp" {
     to_port        = -1
 }
 
-# Entrada: permitir SQL
-resource "aws_network_acl_rule" "inbound_sql" {
-    network_acl_id = aws_network_acl.public_acl.id
-    rule_number    = 160
-    egress         = false
-    protocol       = "tcp"
-    rule_action    = "allow"
-    cidr_block     = "0.0.0.0/0"
-    from_port      = 3306
-    to_port        = 3306
-}
-
 # Salida: permitir SSH
 resource "aws_network_acl_rule" "outbound_ssh" {
     network_acl_id = aws_network_acl.public_acl.id
@@ -252,143 +240,9 @@ resource "aws_network_acl_rule" "outbound_icmp" {
     to_port        = -1
 }
 
-# Salida: permitir SQL
-resource "aws_network_acl_rule" "outbound_sql" {
-    network_acl_id = aws_network_acl.public_acl.id
-    rule_number    = 160
-    egress         = true
-    protocol       = "tcp"
-    rule_action    = "allow"
-    cidr_block     = "0.0.0.0/0"
-    from_port      = 3306
-    to_port        = 3306
-}
-
 #############################################
 #             Security Group                #
 #############################################
-resource "aws_security_group" "linux_access" {
-    vpc_id      = aws_vpc.main.id
-    name        = "linux-${var.region}-sg"
-    description = "Allow SSH, ICMP, HTTPS access"
-    ingress {
-        description = "SSH access"
-        from_port   = 22
-        to_port     = 22
-        protocol    = "tcp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    ingress {
-        description = "HTTPS access"
-        from_port   = 443
-        to_port     = 443
-        protocol    = "tcp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    ingress {
-        description = "ICMP access"
-        from_port   = -1
-        to_port     = -1
-        protocol    = "icmp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    egress {
-        description = "Allow all outbound traffic"
-        from_port   = 0
-        to_port     = 0
-        protocol    = "-1"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    tags = {
-        Name = "sg-${local.instance_name}-linux"
-    }
-}
-#-----------Linux Web Server----------
-resource "aws_security_group" "web_linux_access" {
-    vpc_id      = aws_vpc.main.id
-    name        = "web-linux-${var.region}-sg"
-    description = "Allow SSH, HTTP and ICMP access"
-    ingress {
-        description = "SSH access"
-        from_port   = 22
-        to_port     = 22
-        protocol    = "tcp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    ingress {
-        description = "HTTP access"
-        from_port   = 80
-        to_port     = 80
-        protocol    = "tcp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    ingress {
-        description = "ICMP access"
-        from_port   = -1
-        to_port     = -1
-        protocol    = "icmp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    egress {
-        description = "Allow all outbound traffic"
-        from_port   = 0
-        to_port     = 0
-        protocol    = "-1"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    tags = {
-        Name = "web-sg-${local.instance_name}-linux"
-    }
-}
-#-----------Linux SQL Server------------
-resource "aws_security_group" "sql_linux_access" {
-    vpc_id      = aws_vpc.main.id
-    name        = "sql-linux-${var.region}-sg"
-    description = "Allow SSH, ICMP and SQL access"
-    ingress {
-        description = "SSH access"
-        from_port   = 22
-        to_port     = 22
-        protocol    = "tcp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    ingress {
-        description = "SQL access Ofuscated"
-        from_port   = 3306
-        to_port     = 3306
-        protocol    = "tcp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    ingress {
-        description = "ICMP access"
-        from_port   = -1
-        to_port     = -1
-        protocol    = "icmp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    egress {
-        description = "Allow all outbound traffic"
-        from_port   = 0
-        to_port     = 0
-        protocol    = "-1"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    tags = {
-        Name = "sql-sg-${local.instance_name}-linux"
-    }
-}
 #-----------Windows Control Node-----------
 resource "aws_security_group" "windows_access" {
     vpc_id      = aws_vpc.main.id
@@ -589,132 +443,12 @@ resource "aws_security_group" "file_windows_access" {
 #############################################
 #              Instance EC2                 #
 #############################################
-#-----------Linux Control node---------------
-resource "aws_instance" "linux_control_node" {
-    ami = var.linux_ami
-    instance_type = var.instance_type
-    key_name = var.key_name
-    subnet_id = aws_subnet.public_subnet1.id
-    security_groups = [aws_security_group.linux_access.id]
-    associate_public_ip_address = true
-
-    root_block_device {
-        volume_size = 20
-        volume_type = "gp2"
-        encrypted   = true
-    }
-
-    iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
-    
-    user_data = base64encode(file("linux_control_node.sh"))
-
-    monitoring = true
-
-    provisioner "file" {
-        source = "./ssh-code.pem"
-        destination = "/home/ubuntu/ssh-code.pem"
-    }
-
-    provisioner "remote-exec" {
-        inline = ["chmod 400 /home/ubuntu/ssh-code.pem"]
-    }
-
-    connection {
-        type = "ssh"
-        user = "ubuntu"
-        private_key = file("./ssh-code.pem")
-        host = aws_instance.linux_control_node.public_ip
-    }
-
-    tags = {
-        Name = "linux-control-node-${local.instance_name}"
-    }
-}
-#-------------Linux web server---------------
-resource "aws_launch_template" "web_linux_template" {
-    name_prefix   = "web-linux-template-"
-    image_id      = var.linux_ami
-    instance_type = var.instance_type
-    
-    key_name      = var.key_name
-
-    iam_instance_profile {
-        name = aws_iam_instance_profile.ec2_instance_profile.name
-    }
-
-    network_interfaces {
-        associate_public_ip_address = true
-        security_groups             = [aws_security_group.web_linux_access.id]
-    }
-
-    monitoring {
-        enabled = true
-    }
-
-    block_device_mappings {
-        device_name = "/dev/sda1"
-        ebs {
-            volume_size = 20
-            volume_type = "gp2"
-            encrypted   = true
-        }
-    }
-
-    user_data = base64encode(file("web_server_linux.sh"))
-
-    tag_specifications {
-        resource_type = "instance"
-        tags = {
-            Name = "web-linux-${local.instance_name}"
-            Role = "web"
-        }
-    }
-}
-#-------------Linux sql server---------------
-resource "aws_launch_template" "sql_linux_template" {
-    name_prefix   = "sql-linux-template-"
-    image_id      = var.linux_ami
-    instance_type = var.instance_type
-    
-    key_name      = var.key_name
-
-    iam_instance_profile {
-        name = aws_iam_instance_profile.ec2_instance_profile.name
-    }
-
-    network_interfaces {
-        associate_public_ip_address = true
-        security_groups             = [aws_security_group.sql_linux_access.id]
-    }
-
-    monitoring {
-        enabled = true
-    }
-
-    block_device_mappings {
-        device_name = "/dev/sda1"
-        ebs {
-            volume_size = 20
-            volume_type = "gp2"
-            encrypted   = true
-        }
-    }
-
-    user_data = base64encode(file("sql_server_linux.sh"))
-
-    tag_specifications {
-        resource_type = "instance"
-        tags = {
-            Name = "sql-linux-${local.instance_name}"
-            Role = "sql"
-        }
-    }
-}
 #-----------Windows Control Node------------
 resource "aws_instance" "windows_control_node" {
     ami = var.linux_ami
     instance_type = var.instance_type
     key_name = var.key_name
+
     subnet_id = aws_subnet.public_subnet2.id
     security_groups = [aws_security_group.windows_access.id]
     associate_public_ip_address = true
@@ -884,87 +618,6 @@ resource "aws_launch_template" "file_windows_template" {
 #############################################
 #            Auto Scaling Group             #
 #############################################
-#-------------Linux web server---------------
-resource "aws_autoscaling_group" "web_linux_asg" {
-    name                = "web-linux-asg-${local.instance_name}"
-
-    desired_capacity    = 1
-    max_size            = 3
-    min_size            = 1
-
-    target_group_arns         = [aws_lb_target_group.web_linux_tg.arn]
-    health_check_type         = "EC2"
-    health_check_grace_period = 300
-    
-    vpc_zone_identifier = [aws_subnet.public_subnet1.id]
-    launch_template {
-        id      = aws_launch_template.web_linux_template.id
-        version = "$Latest"
-    }
-
-    tag {
-        key                 = "Name"
-        value               = "web-linux-${local.instance_name}"
-        propagate_at_launch = true
-    }
-    tag {
-        key                 = "Role"
-        value               = "web"
-        propagate_at_launch = true
-    }
-
-    lifecycle {
-        create_before_destroy = true
-    }
-}
-resource "aws_autoscaling_policy" "web_lin_scale_up" {
-    name                   = "web-lin-scale-up-${var.region}"
-    autoscaling_group_name = aws_autoscaling_group.web_linux_asg.name
-    scaling_adjustment     = 1
-    adjustment_type        = "ChangeInCapacity"
-    cooldown               = 300
-}
-#--------------Linux sql server---------------
-resource "aws_autoscaling_group" "sql_linux_asg" {
-    name                = "sql-linux-asg-${local.instance_name}"
-
-    desired_capacity    = 1
-    max_size            = 3
-    min_size            = 1
-
-    target_group_arns         = [aws_lb_target_group.sql_linux_tg.arn]
-    health_check_type         = "EC2"
-    health_check_grace_period = 300
-    
-    vpc_zone_identifier = [aws_subnet.public_subnet1.id]
-    launch_template {
-        id      = aws_launch_template.sql_linux_template.id
-        version = "$Latest"
-    }
-
-    tag {
-        key                 = "Name"
-        value               = "sql-linux-${local.instance_name}"
-        propagate_at_launch = true
-    }
-
-    tag {
-        key                 = "Role"
-        value               = "sql"
-        propagate_at_launch = true
-    }
-
-    lifecycle {
-        create_before_destroy = true
-    }
-}
-resource "aws_autoscaling_policy" "sql_lin_scale_up" {
-    name                   = "sql_lin-scale-up-${var.region}"
-    autoscaling_group_name = aws_autoscaling_group.sql_linux_asg.name
-    scaling_adjustment     = 1
-    adjustment_type        = "ChangeInCapacity"
-    cooldown               = 300
-}
 #------------Windows IIS Server------------
 resource "aws_autoscaling_group" "iis_windows_asg" {
     name                = "iis-windows-asg-${local.instance_name}"
@@ -1089,113 +742,17 @@ resource "aws_autoscaling_policy" "file_win_scale_up" {
     cooldown               = 300
 }
 
-#############################################
-#           Elastic Load Balancer           #
-#############################################
-#-------------Linux web server---------------
-resource "aws_lb_target_group" "web_linux_tg" {
-    name     = "web-linux-tg-${var.region}"
-    port     = 80
-    protocol = "HTTP"
-    vpc_id   = aws_vpc.main.id
-}
-#-------------Linux sql server---------------
-resource "aws_lb_target_group" "sql_linux_tg" {
-    name     = "sql-linux-tg-${var.region}"
-    port     = 3306
-    protocol = "TCP"
-    vpc_id   = aws_vpc.main.id
-}
-#--------------Linux web server---------------
-resource "aws_lb" "web_linux_lb" {
-    name               = "web-linux-lb-${var.region}"
-    internal           = false
-    load_balancer_type = "application"
-    security_groups    = [aws_security_group.web_linux_access.id]
-    subnets            = [aws_subnet.public_subnet1.id, 
-                            aws_subnet.public_subnet2.id]
-
-    tags = {
-        Name = "web-linux-lb-${local.instance_name}"
-    }
-}
-#-------------Linux sql server---------------
-resource "aws_lb" "sql_linux_lb" {
-    name               = "sql-linux-lb-${var.region}"
-    internal           = false
-    load_balancer_type = "network"
-    subnets            = [aws_subnet.public_subnet1.id, 
-                            aws_subnet.public_subnet2.id]
-
-    tags = {
-        Name = "web-linux-lb-${local.instance_name}"
-    }
-}
-#-------------Linux web server---------------
-resource "aws_lb_listener" "web_linux_lb_listener" {
-    load_balancer_arn = aws_lb.web_linux_lb.arn
-    port              = 80
-    protocol          = "HTTP"
-    default_action {
-        type             = "forward"
-        target_group_arn = aws_lb_target_group.web_linux_tg.arn
-    }
-}
-#-------------Linux sql server---------------
-resource "aws_lb_listener" "sql_linux_lb_listener" {
-    load_balancer_arn = aws_lb.sql_linux_lb.arn
-    port              = 3306
-    protocol          = "TCP"
-    default_action {
-        type             = "forward"
-        target_group_arn = aws_lb_target_group.sql_linux_tg.arn
-    }
-}
-#-------------Linux web server---------------
-resource "aws_autoscaling_attachment" "web_linux_attach" {
-    autoscaling_group_name = aws_autoscaling_group.web_linux_asg.id
-    lb_target_group_arn    = aws_lb_target_group.web_linux_tg.arn
-}
-#-------------Linux sql server---------------
-resource "aws_autoscaling_attachment" "sql_linux_attach" {
-    autoscaling_group_name = aws_autoscaling_group.sql_linux_asg.id
-    lb_target_group_arn    = aws_lb_target_group.sql_linux_tg.arn
-}
-
 ###############################################
 #            CloudWatch Dashboard             #
 ###############################################
 resource "aws_cloudwatch_dashboard" "autodeployment_dashboard" {
-    depends_on = [ aws_instance.linux_control_node, aws_instance.windows_control_node,
-                    aws_autoscaling_group.web_linux_asg, aws_autoscaling_group.sql_linux_asg, aws_autoscaling_group.iis_windows_asg, aws_autoscaling_group.file_windows_asg,
+    depends_on = [ aws_instance.windows_control_node, aws_autoscaling_group.iis_windows_asg,
+                    aws_autoscaling_group.file_windows_asg,
                     aws_autoscaling_group.ad_windows_asg ]
 
     dashboard_name = "autodeployment-server-dashboard"
     dashboard_body = jsonencode({
         widgets = [
-            {
-                type    = "metric"
-                x       = 0
-                y       = 0
-                width   = 24
-                height  = 6
-
-                properties = {
-                    title   = "Linux-Control-Node Resource"
-                    region  = var.region
-                    stat    = "Average"
-                    period  = 120
-
-                    metrics = [
-                        [
-                            "AWS/EC2",
-                            "CPUUtilization",
-                            "InstanceId",
-                            "${aws_instance.linux_control_node.id}"
-                        ]
-                    ]
-                }
-            },
             {
                 type    = "metric"
                 x       = 0
@@ -1215,52 +772,6 @@ resource "aws_cloudwatch_dashboard" "autodeployment_dashboard" {
                             "CPUUtilization",
                             "InstanceId",
                             "${aws_instance.windows_control_node.id}"
-                        ]
-                    ]
-                }
-            },
-            {
-                type    = "metric"
-                x       = 0
-                y       = 12
-                width   = 24
-                height  = 6
-
-                properties = {
-                    title   = "Web-Linux-Server Resource"
-                    region  = var.region
-                    stat    = "Average"
-                    period  = 120
-
-                    metrics = [
-                        [
-                            "AWS/EC2",
-                            "CPUUtilization",
-                            "AutoScalingGroupName",
-                            "${aws_autoscaling_group.web_linux_asg.name}"
-                        ]
-                    ]
-                }
-            },
-            {
-                type    = "metric"
-                x       = 0
-                y       = 18
-                width   = 24
-                height  = 6
-
-                properties = {
-                    title   = "SQL-Linux-Server Resource"
-                    region  = var.region
-                    stat    = "Average"
-                    period  = 120
-
-                    metrics = [
-                        [
-                            "AWS/EC2",
-                            "CPUUtilization",
-                            "AutoScalingGroupName",
-                            "${aws_autoscaling_group.sql_linux_asg.name}"
                         ]
                     ]
                 }
@@ -1342,22 +853,6 @@ resource "aws_cloudwatch_dashboard" "autodeployment_dashboard" {
 #          CloudWatch Alarm Instance          #
 ###############################################
 # CPU Utilization >80%
-#-------------Linux Control Node-----------------
-resource "aws_cloudwatch_metric_alarm" "linux_control_node_alarm" {
-    alarm_description = "Monitoring CPU Utilization"
-    alarm_name          = "Linux-Control-Node"
-    namespace           = "AWS/EC2"
-    metric_name         = "CPUUtilization"
-    statistic           = "Average"
-    period              = 120
-    evaluation_periods  = 2
-    threshold           = 80
-    comparison_operator = "GreaterThanThreshold"
-
-    dimensions = {
-        InstanceId = aws_instance.linux_control_node.id
-    }
-}
 #------------Windows Control Node---------------
 resource "aws_cloudwatch_metric_alarm" "windows_control_node_alarm" {
     alarm_description = "Monitoring CPU Utilization"
@@ -1378,40 +873,6 @@ resource "aws_cloudwatch_metric_alarm" "windows_control_node_alarm" {
 ###############################################
 #           CloudWatch Alarm ASG              #
 ###############################################
-#-------------Linux web server---------------
-resource "aws_cloudwatch_metric_alarm" "web_linux_scale_prevention" {
-    alarm_description   = "Monitoring CPU utilization"
-    alarm_actions       = [aws_autoscaling_policy.web_lin_scale_up.arn]
-    alarm_name          = "Web-Linux-CPU-Scale-Up-${local.instance_name}"
-    comparison_operator = "GreaterThanThreshold"
-    namespace           = "AWS/EC2"
-    evaluation_periods  = 2
-    metric_name         = "CPUUtilization"
-    threshold           = 80
-    period              = 120
-    statistic           = "Average"
-
-    dimensions = {
-        AutoScalingGroupName = aws_autoscaling_group.web_linux_asg.name
-    }
-}
-#-------------Linux sql server---------------
-resource "aws_cloudwatch_metric_alarm" "sql_linux_scale_prevention" {
-    alarm_description   = "Monitoring CPU utilization"
-    alarm_actions       = [aws_autoscaling_policy.sql_lin_scale_up.arn]
-    alarm_name          = "SQL-Linux-CPU-Scale-Up-${local.instance_name}"
-    comparison_operator = "GreaterThanThreshold"
-    namespace           = "AWS/EC2"
-    evaluation_periods  = 2
-    metric_name         = "CPUUtilization"
-    threshold           = 80
-    period              = 120
-    statistic           = "Average"
-
-    dimensions = {
-        AutoScalingGroupName = aws_autoscaling_group.sql_linux_asg.name
-    }
-}
 #-----------Windows IIS Server-------------
 resource "aws_cloudwatch_metric_alarm" "iis_windows_scale_prevention" {
     alarm_description   = "Monitoring CPU utilization"
