@@ -926,79 +926,6 @@ resource "aws_cloudwatch_metric_alarm" "file_windows_scale_prevention" {
 }
 
 ###############################################
-#            CloudWatch EventBridge           #
-###############################################
-resource "aws_cloudwatch_event_bus" "autodeployment_bus" {
-    name = "autodeployment-server-bus"
-}
-#----------EC2 Instances Event-----------
-resource "aws_cloudwatch_event_rule" "ec2_state_change" {
-    name            = "EC2StateChange"
-    description     = "Captura cambios de estado de instancias EC2"
-    event_bus_name  = aws_cloudwatch_event_bus.autodeployment_bus.name
-    event_pattern   = file("${path.module}/event_patterns/ec2_changes.json")
-}
-resource "aws_cloudwatch_event_target" "ec2_state_change_target" {
-    rule            = aws_cloudwatch_event_rule.ec2_state_change.name
-    event_bus_name  = aws_cloudwatch_event_bus.autodeployment_bus.name
-    arn             = aws_cloudwatch_log_group.eventbridge_logs.arn
-}
-#---------Autoscaling Group Event-----------
-resource "aws_cloudwatch_event_rule" "autoscaling_activity" {
-    name            = "AutoScalingGroupActivity"
-    description     = "Autoscaling Group Event"
-    event_bus_name  = aws_cloudwatch_event_bus.autodeployment_bus.name
-    event_pattern   = file("${path.module}/event_patterns/autoscaling_activity.json")
-}
-resource "aws_cloudwatch_event_target" "autoscaling_activity_target" {
-    rule            = aws_cloudwatch_event_rule.autoscaling_activity.name
-    event_bus_name  = aws_cloudwatch_event_bus.autodeployment_bus.name
-    arn             = aws_cloudwatch_log_group.eventbridge_logs.arn
-}
-#---------RDS Group Event-----------
-resource "aws_cloudwatch_event_rule" "rds_failures" {
-    name            = "RDSFailures"
-    description     = "RDS Show Failures"
-    event_bus_name  = aws_cloudwatch_event_bus.autodeployment_bus.name
-    event_pattern   = file("${path.module}/event_patterns/rds_failures.json")
-}
-resource "aws_cloudwatch_event_target" "rds_failures_target" {
-    rule            = aws_cloudwatch_event_rule.rds_failures.name
-    event_bus_name  = aws_cloudwatch_event_bus.autodeployment_bus.name
-    arn             = aws_cloudwatch_log_group.eventbridge_logs.arn
-}
-#---------Elastic Load Balancer Group Event-----------
-resource "aws_cloudwatch_event_rule" "elb_healthstatus" {
-    name            = "ELBHealthStatus"
-    description     = "Show ELB Health Status"
-    event_bus_name  = aws_cloudwatch_event_bus.autodeployment_bus.name
-    event_pattern   = file("${path.module}/event_patterns/elb_healthstatus.json")
-}
-resource "aws_cloudwatch_event_target" "elb_healthstatus_target" {
-    rule            = aws_cloudwatch_event_rule.elb_healthstatus.name
-    event_bus_name  = aws_cloudwatch_event_bus.autodeployment_bus.name
-    arn             = aws_cloudwatch_log_group.eventbridge_logs.arn
-}
-
-###############################################
-#      CloudWatch EventBridge Archives        #
-###############################################
-resource "aws_cloudwatch_event_archive" "autodeployment_archive" {
-    name                = "Autodeployment-Archive_logs"
-    event_source_arn    = aws_cloudwatch_event_bus.autodeployment_bus.arn
-    retention_days      = 1
-}
-
-###############################################
-#           CloudWatch Log Groups             #
-###############################################
-# Logs de las aplicaciones (CloudWatch Agent)
-resource "aws_cloudwatch_log_group" "eventbridge_logs" {
-    name              = "/ec2/control-node-logs"
-    retention_in_days = 1
-}
-
-###############################################
 #                 IAM Role                    #
 ###############################################
 resource "aws_iam_role" "ec2_role" {
@@ -1034,25 +961,6 @@ resource "aws_iam_policy" "ec2_get_password_data" {
                 ],
                 Resource = "*"
             }
-        ]
-    })
-}
-resource "aws_iam_role_policy" "eventbridge_to_logs_policy" {
-    role = aws_iam_role.ec2_role.id
-    name = "EventBridgeLogsPolicy"
-
-    policy = jsonencode({
-        Version = "2012-10-17"
-        Statement = [
-        {
-            Effect = "Allow"
-            Action = [
-            "logs:PutLogEvents",
-            "logs:CreateLogStream",
-            "logs:DescribeLogStreams"
-            ]
-            Resource = "${aws_cloudwatch_log_group.eventbridge_logs.arn}:*"
-        }
         ]
     })
 }
