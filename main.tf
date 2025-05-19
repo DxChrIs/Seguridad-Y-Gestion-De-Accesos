@@ -278,10 +278,10 @@ resource "aws_security_group" "windows_access" {
     }
 }
 #------------Windows IIS Server------------
-resource "aws_security_group" "iis_windows_access" {
+resource "aws_security_group" "vpn_windows_access" {
     vpc_id      = aws_vpc.main.id
-    name        = "iis_windows-${var.region}-sg"
-    description = "Allow winRM, RDP, HTTP access"
+    name        = "vpn_windows-${var.region}-sg"
+    description = "Allow winRM, RDP, L2TP/IPsec access"
 
     ingress {
         description = "WinRM access"
@@ -300,10 +300,26 @@ resource "aws_security_group" "iis_windows_access" {
     }
 
     ingress {
-        description = "HTTP access"
-        from_port   = 80
-        to_port     = 80
-        protocol    = "tcp"
+        description = "L2TP/IPsec IKE access"
+        from_port   = 500
+        to_port     = 500
+        protocol    = "udp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    ingress {
+        description = "L2TP/IPsec L2TP access"
+        from_port   = 1701
+        to_port     = 1701
+        protocol    = "udp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    ingress {
+        description = "L2TP/IPsec NAT-T access"
+        from_port   = 4500
+        to_port     = 4500
+        protocol    = "udp"
         cidr_blocks = ["0.0.0.0/0"]
     }
 

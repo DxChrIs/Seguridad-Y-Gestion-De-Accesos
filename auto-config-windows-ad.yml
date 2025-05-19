@@ -209,21 +209,37 @@
         password_never_expires: yes
         state: present
 
-    - name: Crear una GPO para no permitir a los usuarios acceder al CMD
+    - name: Crear una GPO para no permitir a los usuarios acceder al CMD y Powershell
       win_shell: |
-        New-GPO -Name "Bloquear CMD" -Comment "Restringe el acceso al simbolo del sistema a los empleados"
+        New-GPO -Name "Bloquear_CMD_y_Powershell" -Comment "Prevent users from accessing CMD and Powershell"
 
     - name: Configurar la GPO para bloquear el CMD
       win_shell: |
-        Set-GPRegistryValue -Name "Bloquear CMD" `
-          -Key "HKCU\Software\Policies\Microsoft\Windows\System" `
+        Set-GPRegistryValue -Name "Bloquear_CMD_y_Powershell" `
+          -Key "Software\Policies\Microsoft\Windows\System" `
           -ValueName "DisableCMD" `
           -Type DWord `
           -Value 1
-    
-    - name: Vincular la GPO "Bloquear CMD" a la OU "Empleados"
+
+    - name: Configurar la GPO para bloquear Powershell usando DisallowRun
       win_shell: |
-        New-GPLink -Name "Bloquear CMD" `
+        Set-GPRegistryValue -Name "Bloquear_CMD_y_Powershell" `
+          -Key "Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" `
+          -ValueName "DisallowRun" `
+          -Type DWord `
+          -Value 1
+
+    - name: Especificar Powershell.exe en la lista de aplicaciones bloqueadas (DisallowRun)
+      win_shell: |
+        Set-GPRegistryValue -Name "Bloquear_CMD_y_Powershell" `
+          -Key "Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowRun" `
+          -ValueName "1" `
+          -Type String `
+          -Value "powershell.exe"
+
+    - name: Vincular la GPO "Bloquear_CMD_y_Powershell" a la OU "Empleados"
+      win_shell: |
+        New-GPLink -Name "Bloquear_CMD_y_Powershell" `
           -Target "OU=Empleados,DC=chrisyjaime,DC=com,DC=mx" `
           -Enforced Yes
 
