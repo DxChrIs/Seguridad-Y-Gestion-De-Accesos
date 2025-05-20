@@ -216,7 +216,7 @@
     - name: Configurar la GPO para bloquear el CMD
       win_shell: |
         Set-GPRegistryValue -Name "Bloquear_CMD_y_Powershell" `
-          -Key "Software\Policies\Microsoft\Windows\System" `
+          -Key "HKCU\Software\Policies\Microsoft\Windows\System" `
           -ValueName "DisableCMD" `
           -Type DWord `
           -Value 1
@@ -224,7 +224,7 @@
     - name: Configurar la GPO para bloquear Powershell usando DisallowRun
       win_shell: |
         Set-GPRegistryValue -Name "Bloquear_CMD_y_Powershell" `
-          -Key "Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" `
+          -Key "HCKU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" `
           -ValueName "DisallowRun" `
           -Type DWord `
           -Value 1
@@ -232,7 +232,7 @@
     - name: Especificar Powershell.exe en la lista de aplicaciones bloqueadas (DisallowRun)
       win_shell: |
         Set-GPRegistryValue -Name "Bloquear_CMD_y_Powershell" `
-          -Key "Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowRun" `
+          -Key "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowRun" `
           -ValueName "1" `
           -Type String `
           -Value "powershell.exe"
@@ -252,19 +252,19 @@
     - name: Configurar la GPO para el bloqueo de pantalla (10 mins)
       win_shell: |
         Set-GPRegistryValue -Name "Screen_locker_employees" `
-          -Key "Software\Policies\Microsoft\Windows\Control Panel\Desktop" `
+          -Key "HKCU\Software\Policies\Microsoft\Windows\Control Panel\Desktop" `
           -ValueName "ScreenSaveActive" `
           -Type String `
           -Value "1" `
 
         Set-GPRegistryValue -Name "Screen_locker_employees" `
-          -Key "Software\Policies\Microsoft\Windows\Control Panel\Desktop" `
+          -Key "HKCU\Software\Policies\Microsoft\Windows\Control Panel\Desktop" `
           -ValueName "ScreenSaveTimeOut" `
           -Type String `
           -Value "600" `
 
         Set-GPRegistryValue -Name "Screen_locker_employees" `
-          -Key "Software\Policies\Microsoft\Windows\Control Panel\Desktop" `
+          -Key "HKCU\Software\Policies\Microsoft\Windows\Control Panel\Desktop" `
           -ValueName "ScreenSaverIsSecure" `
           -Type String `
           -Value "1"
@@ -284,19 +284,19 @@
     - name: Configurar GPO para managers (5 min)
       win_shell: |
         Set-GPRegistryValue -Name "GPO_Manager_Screensaver" `
-          -Key "Software\Policies\Microsoft\Windows\Control Panel\Desktop" `
+          -Key "HKCU\Software\Policies\Microsoft\Windows\Control Panel\Desktop" `
           -ValueName "ScreenSaveActive" `
           -Type String `
           -Value "1"
 
         Set-GPRegistryValue -Name "GPO_Manager_Screensaver" `
-          -Key "Software\Policies\Microsoft\Windows\Control Panel\Desktop" `
+          -Key "HKCU\Software\Policies\Microsoft\Windows\Control Panel\Desktop" `
           -ValueName "ScreenSaverIsSecure" `
           -Type String `
           -Value "1"
 
         Set-GPRegistryValue -Name "GPO_Manager_Screensaver" `
-          -Key "Software\Policies\Microsoft\Windows\Control Panel\Desktop" `
+          -Key "HKCU\Software\Policies\Microsoft\Windows\Control Panel\Desktop" `
           -ValueName "ScreenSaveTimeOut" `
           -Type String `
           -Value "300"
@@ -316,7 +316,7 @@
     - name: Configurar GPO para restringir acceso a USB (Empleados)
       win_shell: |
         Set-GPRegistryValue -Name "DisableUSB" `
-          -Key "Software\Policies\Microsoft\Windows\RemovableStorageDevices" `
+          -Key "HKLM\Software\Policies\Microsoft\Windows\RemovableStorageDevices" `
           -ValueName "Deny_All" `
           -Type DWord `
           -Value 1
@@ -408,7 +408,7 @@
     - name: Habilitar auditoría de inicio y cierre de sesión
       win_shell: |
         Set-GPRegistryValue -Name "AuditAdminActions" `
-          -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\EventLog\Security" `
+          -Key "HKCU\SOFTWARE\Policies\Microsoft\Windows\EventLog\Security" `
           -ValueName "AuditLogon" `
           -Type DWord `
           -Value 3
@@ -416,7 +416,7 @@
     - name: Habilitar auditoría de acceso a servicios de directorio
       win_shell: |
         Set-GPRegistryValue -Name "AuditAdminActions" `
-          -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\EventLog\Security" `
+          -Key "HKCU\SOFTWARE\Policies\Microsoft\Windows\EventLog\Security" `
           -ValueName "AuditDirectoryServiceAccess" `
           -Type DWord `
           -Value 3
@@ -424,7 +424,7 @@
     - name: Habilitar auditoría de acceso a objetos
       win_shell: |
         Set-GPRegistryValue -Name "AuditAdminActions" `
-          -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\EventLog\Security" `
+          -Key "HKCU\SOFTWARE\Policies\Microsoft\Windows\EventLog\Security" `
           -ValueName "AuditObjectAccess" `
           -Type DWord `
           -Value 3
@@ -432,7 +432,7 @@
     - name: Habilitar auditoría de cambios de política
       win_shell: |
         Set-GPRegistryValue -Name "AuditAdminActions" `
-          -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\EventLog\Security" `
+          -Key "HKCU\SOFTWARE\Policies\Microsoft\Windows\EventLog\Security" `
           -ValueName "AuditPolicyChange" `
           -Type DWord `
           -Value 3
