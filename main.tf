@@ -847,7 +847,7 @@ resource "aws_cloudwatch_metric_alarm" "windows_control_node_alarm" {
     statistic           = "Average"
     period              = 120
     evaluation_periods  = 2
-    threshold           = 80
+    threshold           = 95
     comparison_operator = "GreaterThanThreshold"
 
     dimensions = {
@@ -867,7 +867,7 @@ resource "aws_cloudwatch_metric_alarm" "vpn_windows_scale_prevention" {
     namespace           = "AWS/EC2"
     evaluation_periods  = 2
     metric_name         = "CPUUtilization"
-    threshold           = 80
+    threshold           = 95
     period              = 120
     statistic           = "Average"
 
@@ -884,7 +884,7 @@ resource "aws_cloudwatch_metric_alarm" "ad_windows_scale_prevention" {
     namespace           = "AWS/EC2"
     evaluation_periods  = 2
     metric_name         = "CPUUtilization"
-    threshold           = 80
+    threshold           = 95
     period              = 120
     statistic           = "Average"
 
@@ -901,7 +901,7 @@ resource "aws_cloudwatch_metric_alarm" "radius_windows_scale_prevention" {
     namespace           = "AWS/EC2"
     evaluation_periods  = 2
     metric_name         = "CPUUtilization"
-    threshold           = 80
+    threshold           = 95
     period              = 120
     statistic           = "Average"
 
