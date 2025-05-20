@@ -277,7 +277,7 @@ resource "aws_security_group" "windows_access" {
         Name = "sg-${local.instance_name}-windows"
     }
 }
-#------------Windows IIS Server------------
+#------------Windows VPN Server------------
 resource "aws_security_group" "vpn_windows_access" {
     vpc_id      = aws_vpc.main.id
     name        = "vpn_windows-${var.region}-sg"
@@ -339,7 +339,7 @@ resource "aws_security_group" "vpn_windows_access" {
         cidr_blocks = ["0.0.0.0/0"]
     }
     tags = {
-        Name = "iis-sg-${local.instance_name}-windows"
+        Name = "vpn-sg-${local.instance_name}-windows"
     }
 }
 #------------Windows AD Server-------------
@@ -383,10 +383,10 @@ resource "aws_security_group" "ad_windows_access" {
         Name = "ad-sg-${local.instance_name}-windows"
     }
 }
-#-----------Windows File Server-------------
-resource "aws_security_group" "file_windows_access" {
+#-----------Windows Radius Server-------------
+resource "aws_security_group" "radius_windows_access" {
     vpc_id      = aws_vpc.main.id
-    name        = "file-windows-${var.region}-sg"
+    name        = "radius-windows-${var.region}-sg"
     description = "Allow winRM, RDP access"
 
     ingress {
@@ -421,7 +421,7 @@ resource "aws_security_group" "file_windows_access" {
         cidr_blocks = ["0.0.0.0/0"]
     }
     tags = {
-        Name = "file-sg-${local.instance_name}-windows"
+        Name = "radius-sg-${local.instance_name}-windows"
     }
 }
 
@@ -470,9 +470,9 @@ resource "aws_instance" "windows_control_node" {
         Name = "windows-control-node-${local.instance_name}"
     }
 }
-#-------------Windows IIS Server--------------
-resource "aws_launch_template" "iis_windows_template" {
-    name_prefix   = "iis-windows-template-"
+#-------------Windows VPN Server--------------
+resource "aws_launch_template" "vpn_windows_template" {
+    name_prefix   = "vpn-windows-template-"
     image_id      = var.windows_ami
     instance_type = var.instance_type
     
@@ -483,7 +483,7 @@ resource "aws_launch_template" "iis_windows_template" {
     }
     network_interfaces {
         associate_public_ip_address = true
-        security_groups             = [aws_security_group.iis_windows_access.id]
+        security_groups             = [aws_security_group.vpn_windows_access.id]
     }
 
     monitoring {
@@ -499,13 +499,13 @@ resource "aws_launch_template" "iis_windows_template" {
         }
     }
 
-    user_data = base64encode(file("/iis_server_windows.ps1"))
+    user_data = base64encode(file("/vpn_server_windows.ps1"))
 
     tag_specifications {
         resource_type = "instance"
         tags = {
             Name = "windows-${local.instance_name}"
-            Role = "iis"
+            Role = "vpn"
         }
     }
 
@@ -556,9 +556,9 @@ resource "aws_launch_template" "ad_windows_template" {
         create_before_destroy = true
     }
 }
-#---------Windows File Server-----------
-resource "aws_launch_template" "file_windows_template" {
-    name_prefix   = "file-windows-template-"
+#---------Windows Radius Server-----------
+resource "aws_launch_template" "radius_windows_template" {
+    name_prefix   = "radius-windows-template-"
     image_id      = var.windows_ami
     instance_type = var.instance_type
     
@@ -569,7 +569,7 @@ resource "aws_launch_template" "file_windows_template" {
     }
     network_interfaces {
         associate_public_ip_address = true
-        security_groups             = [aws_security_group.file_windows_access.id]
+        security_groups             = [aws_security_group.radius_windows_access.id]
     }
 
     monitoring {
@@ -585,13 +585,13 @@ resource "aws_launch_template" "file_windows_template" {
         }
     }
 
-    user_data = base64encode(file("/file_server_windows.ps1"))
+    user_data = base64encode(file("/radius_server_windows.ps1"))
 
     tag_specifications {
         resource_type = "instance"
         tags = {
             Name = "windows-${local.instance_name}"
-            Role = "file"
+            Role = "radius"
         }
     }
 
@@ -603,9 +603,9 @@ resource "aws_launch_template" "file_windows_template" {
 #############################################
 #            Auto Scaling Group             #
 #############################################
-#------------Windows IIS Server------------
-resource "aws_autoscaling_group" "iis_windows_asg" {
-    name                = "iis-windows-asg-${local.instance_name}"
+#------------Windows VPN Server------------
+resource "aws_autoscaling_group" "vpn_windows_asg" {
+    name                = "vpn-windows-asg-${local.instance_name}"
 
     desired_capacity    = 1
     max_size            = 3
@@ -617,19 +617,19 @@ resource "aws_autoscaling_group" "iis_windows_asg" {
     vpc_zone_identifier = [aws_subnet.public_subnet1.id]
 
     launch_template {
-        id      = aws_launch_template.iis_windows_template.id
+        id      = aws_launch_template.vpn_windows_template.id
         version = "$Latest"
     }
 
     tag {
         key                 = "Name"
-        value               = "iis-windows-${local.instance_name}"
+        value               = "vpn-windows-${local.instance_name}"
         propagate_at_launch = true
     }
     
     tag {
         key                 = "Role"
-        value               = "iis"
+        value               = "vpn"
         propagate_at_launch = true
     }
 
@@ -637,9 +637,9 @@ resource "aws_autoscaling_group" "iis_windows_asg" {
         create_before_destroy = true
     }
 }
-resource "aws_autoscaling_policy" "iis_win_scale_up" {
-    name                   = "iis-win-scale-up-${var.region}"
-    autoscaling_group_name = aws_autoscaling_group.iis_windows_asg.name
+resource "aws_autoscaling_policy" "vpn_win_scale_up" {
+    name                   = "vpn-win-scale-up-${var.region}"
+    autoscaling_group_name = aws_autoscaling_group.vpn_windows_asg.name
     scaling_adjustment     = 1
     adjustment_type        = "ChangeInCapacity"
     cooldown               = 300
@@ -685,9 +685,9 @@ resource "aws_autoscaling_policy" "ad_win_scale_up" {
     adjustment_type        = "ChangeInCapacity"
     cooldown               = 300
 }
-#------------Windows File Server-------------
-resource "aws_autoscaling_group" "file_windows_asg" {
-    name                = "file-windows-asg-${local.instance_name}"
+#------------Windows Radius Server-------------
+resource "aws_autoscaling_group" "radius_windows_asg" {
+    name                = "radius-windows-asg-${local.instance_name}"
 
     desired_capacity    = 1
     max_size            = 3
@@ -699,19 +699,19 @@ resource "aws_autoscaling_group" "file_windows_asg" {
     vpc_zone_identifier = [aws_subnet.public_subnet1.id]
 
     launch_template {
-        id      = aws_launch_template.file_windows_template.id
+        id      = aws_launch_template.radius_windows_template.id
         version = "$Latest"
     }
 
     tag {
         key                 = "Name"
-        value               = "file-windows-${local.instance_name}"
+        value               = "radius-windows-${local.instance_name}"
         propagate_at_launch = true
     }
     
     tag {
         key                 = "Role"
-        value               = "file"
+        value               = "radius"
         propagate_at_launch = true
     }
 
@@ -719,9 +719,9 @@ resource "aws_autoscaling_group" "file_windows_asg" {
         create_before_destroy = true
     }
 }
-resource "aws_autoscaling_policy" "file_win_scale_up" {
-    name                   = "file-win-scale-up-${var.region}"
-    autoscaling_group_name = aws_autoscaling_group.file_windows_asg.name
+resource "aws_autoscaling_policy" "radius_win_scale_up" {
+    name                   = "radius-win-scale-up-${var.region}"
+    autoscaling_group_name = aws_autoscaling_group.radius_windows_asg.name
     scaling_adjustment     = 1
     adjustment_type        = "ChangeInCapacity"
     cooldown               = 300
@@ -731,8 +731,8 @@ resource "aws_autoscaling_policy" "file_win_scale_up" {
 #            CloudWatch Dashboard             #
 ###############################################
 resource "aws_cloudwatch_dashboard" "autodeployment_dashboard" {
-    depends_on = [ aws_instance.windows_control_node, aws_autoscaling_group.iis_windows_asg,
-                    aws_autoscaling_group.file_windows_asg,
+    depends_on = [ aws_instance.windows_control_node, aws_autoscaling_group.vpn_windows_asg,
+                    aws_autoscaling_group.radius_windows_asg,
                     aws_autoscaling_group.ad_windows_asg ]
 
     dashboard_name = "autodeployment-server-dashboard"
@@ -769,7 +769,7 @@ resource "aws_cloudwatch_dashboard" "autodeployment_dashboard" {
                 height  = 6
 
                 properties = {
-                    title   = "IIS-Windows-Server Resource"
+                    title   = "VPN-Windows-Server Resource"
                     region  = var.region
                     stat    = "Average"
                     period  = 120
@@ -779,7 +779,7 @@ resource "aws_cloudwatch_dashboard" "autodeployment_dashboard" {
                             "AWS/EC2",
                             "CPUUtilization",
                             "AutoScalingGroupName",
-                            "${aws_autoscaling_group.iis_windows_asg.name}"
+                            "${aws_autoscaling_group.vpn_windows_asg.name}"
                         ]
                     ]
                 }
@@ -815,7 +815,7 @@ resource "aws_cloudwatch_dashboard" "autodeployment_dashboard" {
                 height  = 6
 
                 properties = {
-                    title   = "File-Windows-Server Resource"
+                    title   = "Radius-Windows-Server Resource"
                     region  = var.region
                     stat    = "Average"
                     period  = 120
@@ -825,7 +825,7 @@ resource "aws_cloudwatch_dashboard" "autodeployment_dashboard" {
                             "AWS/EC2",
                             "CPUUtilization",
                             "AutoScalingGroupName",
-                            "${aws_autoscaling_group.file_windows_asg.name}"
+                            "${aws_autoscaling_group.radius_windows_asg.name}"
                         ]
                     ]
                 }
@@ -858,11 +858,11 @@ resource "aws_cloudwatch_metric_alarm" "windows_control_node_alarm" {
 ###############################################
 #           CloudWatch Alarm ASG              #
 ###############################################
-#-----------Windows IIS Server-------------
-resource "aws_cloudwatch_metric_alarm" "iis_windows_scale_prevention" {
+#-----------Windows VPN Server-------------
+resource "aws_cloudwatch_metric_alarm" "vpn_windows_scale_prevention" {
     alarm_description   = "Monitoring CPU utilization"
-    alarm_actions       = [aws_autoscaling_policy.iis_win_scale_up.arn]
-    alarm_name          = "IIS-Win-CPU-Scale-Up-${local.instance_name}"
+    alarm_actions       = [aws_autoscaling_policy.vpn_win_scale_up.arn]
+    alarm_name          = "VPN-Win-CPU-Scale-Up-${local.instance_name}"
     comparison_operator = "GreaterThanThreshold"
     namespace           = "AWS/EC2"
     evaluation_periods  = 2
@@ -872,7 +872,7 @@ resource "aws_cloudwatch_metric_alarm" "iis_windows_scale_prevention" {
     statistic           = "Average"
 
     dimensions = {
-        AutoScalingGroupName = aws_autoscaling_group.iis_windows_asg.name
+        AutoScalingGroupName = aws_autoscaling_group.vpn_windows_asg.name
     }
 }
 #----------Windows AD Server-------------
@@ -892,11 +892,11 @@ resource "aws_cloudwatch_metric_alarm" "ad_windows_scale_prevention" {
         AutoScalingGroupName = aws_autoscaling_group.ad_windows_asg.name
     }
 }
-#-----------Windows File Server-----------
-resource "aws_cloudwatch_metric_alarm" "file_windows_scale_prevention" {
+#-----------Windows Radius Server-----------
+resource "aws_cloudwatch_metric_alarm" "radius_windows_scale_prevention" {
     alarm_description   = "Monitoring CPU utilization"
-    alarm_actions       = [aws_autoscaling_policy.file_win_scale_up.arn]
-    alarm_name          = "File-Win-CPU-Scale-Up-${local.instance_name}"
+    alarm_actions       = [aws_autoscaling_policy.radius_win_scale_up.arn]
+    alarm_name          = "Radius-Win-CPU-Scale-Up-${local.instance_name}"
     comparison_operator = "GreaterThanThreshold"
     namespace           = "AWS/EC2"
     evaluation_periods  = 2
@@ -906,7 +906,7 @@ resource "aws_cloudwatch_metric_alarm" "file_windows_scale_prevention" {
     statistic           = "Average"
 
     dimensions = {
-        AutoScalingGroupName = aws_autoscaling_group.file_windows_asg.name
+        AutoScalingGroupName = aws_autoscaling_group.radius_windows_asg.name
     }
 }
 

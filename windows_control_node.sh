@@ -36,19 +36,19 @@ MY_IP=$(hostname -I | awk '{print $1}')
 
 sleep 120
 
-# Obtener la ID de la instancia IIS (puedes hacer esto con AD y FILE igual)
-INSTANCE_ID_IIS=$(aws ec2 describe-instances --filters "Name=tag:Role,Values=iis" "Name=instance-state-name,Values=running" \
+# Obtener la ID de la instancia VPN (puedes hacer esto con AD y RADIUS igual)
+INSTANCE_ID_VPN=$(aws ec2 describe-instances --filters "Name=tag:Role,Values=vpn" "Name=instance-state-name,Values=running" \
   --query "Reservations[0].Instances[0].InstanceId" --output text)
 
 INSTANCE_ID_AD=$(aws ec2 describe-instances --filters "Name=tag:Role,Values=ad" "Name=instance-state-name,Values=running" \
   --query "Reservations[0].Instances[0].InstanceId" --output text)
 
-INSTANCE_ID_FILE=$(aws ec2 describe-instances --filters "Name=tag:Role,Values=file" "Name=instance-state-name,Values=running"\
+INSTANCE_ID_RADIUS=$(aws ec2 describe-instances --filters "Name=tag:Role,Values=radius" "Name=instance-state-name,Values=running"\
   --query "Reservations[0].Instances[0].InstanceId" --output text)
 
 # Obtener la contraseña de administrador usando AWS CLI y OpenSSL
-ADMIN_PASSWORD_IIS=$(aws ec2 get-password-data \
-  --instance-id "$INSTANCE_ID_IIS" \
+ADMIN_PASSWORD_VPN=$(aws ec2 get-password-data \
+  --instance-id "$INSTANCE_ID_VPN" \
   --priv-launch-key "$PEM_KEY_PATH" \
   --query 'PasswordData' \
   --output text)
@@ -59,37 +59,37 @@ ADMIN_PASSWORD_AD=$(aws ec2 get-password-data \
   --query 'PasswordData' \
   --output text)
 
-ADMIN_PASSWORD_FILE=$(aws ec2 get-password-data \
-  --instance-id "$INSTANCE_ID_FILE" \
+ADMIN_PASSWORD_RADIUS=$(aws ec2 get-password-data \
+  --instance-id "$INSTANCE_ID_RADIUS" \
   --priv-launch-key "$PEM_KEY_PATH" \
   --query 'PasswordData' \
   --output text)
 
-# Obtener IPs de las instancias EC2 con etiquetas específicas (iis, ad, file)
-#IIS
-aws ec2 describe-instances --filters "Name=tag:Role,Values=iis" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PrivateDnsName" --output text > iis_ips.txt
+# Obtener IPs de las instancias EC2 con etiquetas específicas (vpn, ad, radius)
+#VPN
+aws ec2 describe-instances --filters "Name=tag:Role,Values=vpn" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PrivateDnsName" --output text > vpn_ips.txt
 #AD
 aws ec2 describe-instances --filters "Name=tag:Role,Values=ad" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PrivateDnsName" --output text > ad_ips.txt
-#File
-aws ec2 describe-instances --filters "Name=tag:Role,Values=file" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PrivateDnsName" --output text > file_ips.txt
+#Radius
+aws ec2 describe-instances --filters "Name=tag:Role,Values=radius" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PrivateDnsName" --output text > radius_ips.txt
 
 # === Crear archivo de inventario Windows para Ansible + WinRM ===
-# IIS
+# VPN
 {
   echo "[windows]"
-  grep -v "$MY_IP" iis_ips.txt
+  grep -v "$MY_IP" vpn_ips.txt
   echo ""
   cat <<EOL
 [windows:vars]
 ansible_user=Administrator
-ansible_password="$ADMIN_PASSWORD_IIS"
+ansible_password="$ADMIN_PASSWORD_VPN"
 ansible_port=5985
 ansible_connection=winrm
 ansible_winrm_transport=basic
 ansible_winrm_server_cert_validation=ignore
 ansible_winrm_scheme=http
 EOL
-} > inventory_iis.ini
+} > inventory_vpn.ini
 
 # AD
 {
@@ -108,27 +108,27 @@ ansible_winrm_scheme=http
 EOL
 } > inventory_ad.ini
 
-# FILE
+# Radius
 {
   echo "[windows]"
-  grep -v "$MY_IP" file_ips.txt
+  grep -v "$MY_IP" radius_ips.txt
   echo ""
   cat <<EOL
 [windows:vars]
 ansible_user=Administrator
-ansible_password="$ADMIN_PASSWORD_FILE"
+ansible_password="$ADMIN_PASSWORD_RADIUS"
 ansible_port=5985
 ansible_connection=winrm
 ansible_winrm_transport=basic
 ansible_winrm_server_cert_validation=ignore
 ansible_winrm_scheme=http
 EOL
-} > inventory_file.ini
+} > inventory_radius.ini
 
 sleep 120
 
 # === Ejecutar playbook según el rol ===
-ansible-playbook -i inventory_iis.ini auto-config-windows-iis.yml
+ansible-playbook -i inventory_vpn.ini auto-config-windows-vpn.yml
 
 sleep 180
 
@@ -136,4 +136,4 @@ ansible-playbook -i inventory_ad.ini auto-config-windows-ad.yml
 
 sleep 180
 
-ansible-playbook -i inventory_file.ini auto-config-windows-file-server.yml
+ansible-playbook -i inventory_radius.ini auto-config-windows-radius-server.yml
