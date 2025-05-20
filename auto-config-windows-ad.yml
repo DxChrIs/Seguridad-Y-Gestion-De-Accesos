@@ -224,7 +224,7 @@
     - name: Configurar la GPO para bloquear Powershell usando DisallowRun
       win_shell: |
         Set-GPRegistryValue -Name "Bloquear_CMD_y_Powershell" `
-          -Key "HCKU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" `
+          -Key "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" `
           -ValueName "DisallowRun" `
           -Type DWord `
           -Value 1
