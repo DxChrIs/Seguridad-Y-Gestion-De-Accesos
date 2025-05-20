@@ -9,12 +9,12 @@ output "key_name" {
 output "windows_control_node" {
     value = aws_instance.windows_control_node.id
 }
-output "iis_windows_control_node" {
-    value = aws_autoscaling_group.iis_windows_asg.name
+output "vpn_windows_control_node" {
+    value = aws_autoscaling_group.vpn_windows_asg.name
 }
 output "ad_windows_control_node" {
     value = aws_autoscaling_group.ad_windows_asg.name
 }
-output "file_windows_control_node" {
-    value = aws_autoscaling_group.file_windows_asg.name
+output "radius_windows_control_node" {
+    value = aws_autoscaling_group.radius_windows_asg.name
 }
