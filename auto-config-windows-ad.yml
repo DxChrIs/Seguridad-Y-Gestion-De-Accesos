@@ -283,19 +283,19 @@
 
     - name: Configurar GPO para managers (5 min)
       win_shell: |
-        Set-GPRegistryValue -Name "GPO_Manager_Screensaver" `
+        Set-GPRegistryValue -Name "Screen_locker_Manager" `
           -Key "HKCU\Software\Policies\Microsoft\Windows\Control Panel\Desktop" `
           -ValueName "ScreenSaveActive" `
           -Type String `
           -Value "1"
 
-        Set-GPRegistryValue -Name "GPO_Manager_Screensaver" `
+        Set-GPRegistryValue -Name "Screen_locker_Manager" `
           -Key "HKCU\Software\Policies\Microsoft\Windows\Control Panel\Desktop" `
           -ValueName "ScreenSaverIsSecure" `
           -Type String `
           -Value "1"
 
-        Set-GPRegistryValue -Name "GPO_Manager_Screensaver" `
+        Set-GPRegistryValue -Name "Screen_locker_Manager" `
           -Key "HKCU\Software\Policies\Microsoft\Windows\Control Panel\Desktop" `
           -ValueName "ScreenSaveTimeOut" `
           -Type String `
@@ -303,7 +303,7 @@
 
     - name: Vincular GPO manager
       win_shell: |
-        New-GPLink -Name "GPO_Manager_Screensaver" `
+        New-GPLink -Name "Screen_locker_Manager" `
           -Target "OU=Manager,DC=chrisyjaime,DC=com,DC=mx" `
           -Enforced Yes
 
