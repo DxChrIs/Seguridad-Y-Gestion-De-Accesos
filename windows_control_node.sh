@@ -125,15 +125,15 @@ ansible_winrm_scheme=http
 EOL
 } > inventory_radius.ini
 
-sleep 120
+sleep 500
 
 # === Ejecutar playbook según el rol ===
 ansible-playbook -i inventory_vpn.ini auto-config-windows-vpn.yml
 
-sleep 180
+sleep 300
 
 ansible-playbook -i inventory_ad.ini auto-config-windows-ad.yml
 
-sleep 180
+sleep 300
 
 ansible-playbook -i inventory_radius.ini auto-config-windows-radius-server.yml
