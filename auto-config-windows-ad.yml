@@ -2,7 +2,6 @@
 - name: Configurar y asegurar Active Directory en Windows Server 2022
   hosts: windows
   gather_facts: no
-  become: yes
 
   collections:
     - ansible.windows
