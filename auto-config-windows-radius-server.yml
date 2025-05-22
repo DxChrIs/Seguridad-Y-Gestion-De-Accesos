@@ -49,7 +49,7 @@
         include_management_tools: yes
 
     - name: Abrir puertos RADIUS en el firewall
-      ansible.windows.win_firewall_rule:
+      win_firewall_rule:
         name: "RADIUS UDP 1812"
         localport: 1812
         protocol: udp
@@ -58,7 +58,7 @@
         state: present
 
     - name: Abrir puertos RADIUS en el firewall (puerto 1813)
-      ansible.windows.win_firewall_rule:
+      win_firewall_rule:
         name: "RADIUS UDP 1813"
         localport: 1813
         protocol: udp
