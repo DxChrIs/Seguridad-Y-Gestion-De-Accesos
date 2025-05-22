@@ -1,0 +1,68 @@
+---
+- name: Configurar servidor RADIUS en Windows Server 2022
+  hosts: windows
+  gather_facts: no
+
+  vars:
+    domain_name: "chrisyjaime.com.mx"
+    domain_user: "administrator@chrisyjaime.com.mx"
+    domain_password: "ElAdministrador1853"
+    radius_hostname: "GDL-RAS-01"
+    ad_dns_ip: "{{ lookup('file', 'ad_dns_ip.txt') | trim }}"
+
+  tasks:
+    - name: Establecer el nombre del host
+      ansible.windows.win_hostname:
+        name: "{{ radius_hostname }}"
+      register: hostname_result
+
+    - name: Reiniciar si el nombre del host cambió
+      ansible.windows.win_reboot:
+        msg: "Reiniciando para aplicar el nuevo nombre de host"
+        pre_reboot_delay: 10
+      when: hostname_result.reboot_required
+
+    - name: Configurar el DNS del adaptador de red
+      ansible.windows.win_dns_client:
+        adapter_names: '*'
+        dns_servers:
+          - "{{ ad_dns_ip }}"
+
+    - name: Unir al dominio Active Directory
+      microsoft.ad.membership:
+        dns_domain_name: "{{ domain_name }}"
+        domain_admin_user: "{{ domain_user }}"
+        domain_admin_password: "{{ domain_password }}"
+        state: domain
+      register: domain_join
+
+    - name: Reiniciar si se unió al dominio
+      ansible.windows.win_reboot:
+        msg: "Reiniciando después de unirse al dominio"
+        pre_reboot_delay: 10
+      when: domain_join.reboot_required
+
+    - name: Instalar el rol de Network Policy Server (NPS)
+      ansible.windows.win_feature:
+        name: NPAS
+        state: present
+        include_management_tools: yes
+
+    - name: Abrir puertos RADIUS en el firewall
+      ansible.windows.win_firewall_rule:
+        name: "RADIUS UDP 1812"
+        localport: 1812
+        protocol: udp
+        action: allow
+        direction: in
+        state: present
+
+    - name: Abrir puertos RADIUS en el firewall (puerto 1813)
+      ansible.windows.win_firewall_rule:
+        name: "RADIUS UDP 1813"
+        localport: 1813
+        protocol: udp
+        action: allow
+        direction: in
+        state: present
+

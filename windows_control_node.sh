@@ -43,6 +43,10 @@ INSTANCE_ID_VPN=$(aws ec2 describe-instances --filters "Name=tag:Role,Values=vpn
 INSTANCE_ID_AD=$(aws ec2 describe-instances --filters "Name=tag:Role,Values=ad" "Name=instance-state-name,Values=running" \
   --query "Reservations[0].Instances[0].InstanceId" --output text)
 
+AD_IP=$(aws ec2 describe-instances \
+  --filters "Name=tag:Role,Values=ad" "Name=instance-state-name,Values=running" \
+  --query "Reservations[0].Instances[0].PrivateIpAddress" --output text)
+
 INSTANCE_ID_RADIUS=$(aws ec2 describe-instances --filters "Name=tag:Role,Values=radius" "Name=instance-state-name,Values=running"\
   --query "Reservations[0].Instances[0].InstanceId" --output text)
 
@@ -136,4 +140,5 @@ ansible-playbook -i inventory_ad.ini auto-config-windows-ad.yml
 
 sleep 300
 
-ansible-playbook -i inventory_radius.ini auto-config-windows-radius-server.yml
+ansible-playbook -i inventory_radius.ini auto-config-windows-radius-server.yml \
+  --extra-vars "ad_dns_ip=${AD_IP}"
