@@ -34,7 +34,7 @@
         # Promover el servidor a un controlador de dominio
         Install-ADDSForest `
             -DomainName "chrisyjaime.com.mx" `
-            -DomainNetbiosName "-GDL-RAS-01" `
+            -DomainNetbiosName "GDL-RAS-01" `
             -SafeModeAdministratorPassword (ConvertTo-SecureString "ElAdministrador1853" -AsPlainText -Force) `
             -InstallDNS `
             -Force
