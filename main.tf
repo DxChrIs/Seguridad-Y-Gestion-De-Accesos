@@ -141,10 +141,94 @@ resource "aws_network_acl_rule" "inbound_https" {
     to_port        = 443
 }
 
+# Entrada: permitir L2TP/IPsec IKE (500)
+resource "aws_network_acl_rule" "inbound_l2tp_ike" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 150
+    egress         = false
+    protocol       = "udp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 500
+    to_port        = 500
+}
+
+# Entrada: permitir L2TP (1701)
+resource "aws_network_acl_rule" "inbound_l2tp" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 160
+    egress         = false
+    protocol       = "udp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 1701
+    to_port        = 1701
+}
+
+# Entrada: permitir L2TP/IPsec NAT-T (4500)
+resource "aws_network_acl_rule" "inbound_l2tp_nat_t" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 170
+    egress         = false
+    protocol       = "udp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 4500
+    to_port        = 4500
+}
+
+# Entrada: permitir Radius Auth (1812)
+resource "aws_network_acl_rule" "inbound_radius_auth" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 180
+    egress         = false
+    protocol       = "udp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 1812
+    to_port        = 1812
+}
+
+# Entrada: permitir Radius Account (1813)
+resource "aws_network_acl_rule" "inbound_radius_account" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 190
+    egress         = false
+    protocol       = "udp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 1813
+    to_port        = 1813
+}
+
+# Entrada: permitir DNS (53)
+resource "aws_network_acl_rule" "inbound_dns" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 200
+    egress         = false
+    protocol       = "tcp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 53
+    to_port        = 53
+}
+
+# Entrada: permitir LDAP (389)
+resource "aws_network_acl_rule" "inbound_ldap" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 210
+    egress         = false
+    protocol       = "tcp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 389
+    to_port        = 389
+}
+
 # Entrada: permitir ICMP
 resource "aws_network_acl_rule" "inbound_icmp" {
     network_acl_id = aws_network_acl.public_acl.id
-    rule_number    = 150
+    rule_number    = 220
     egress         = false
     protocol       = "icmp"
     rule_action    = "allow"
@@ -213,10 +297,94 @@ resource "aws_network_acl_rule" "outbound_https" {
     to_port        = 443
 }
 
+# Salida: permitir L2TP/IPsec IKE (500)
+resource "aws_network_acl_rule" "outbound_l2tp_ike" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 150
+    egress         = true
+    protocol       = "udp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 500
+    to_port        = 500
+}
+
+# Salida: permitir L2TP (1701)
+resource "aws_network_acl_rule" "outbound_l2tp" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 160
+    egress         = true
+    protocol       = "udp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 1701
+    to_port        = 1701
+}
+
+# Salida: permitir L2TP/IPsec NAT-T (4500)
+resource "aws_network_acl_rule" "outbound_l2tp_nat_t" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 170
+    egress         = true
+    protocol       = "udp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 4500
+    to_port        = 4500
+}
+
+# Salida: permitir Radius Auth (1812)
+resource "aws_network_acl_rule" "outbound_radius_auth" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 180
+    egress         = true
+    protocol       = "udp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 1812
+    to_port        = 1812
+}
+
+# Salida: permitir Radius Account (1813)
+resource "aws_network_acl_rule" "outbound_radius_account" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 190
+    egress         = true
+    protocol       = "udp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 1813
+    to_port        = 1813
+}
+
+# Salida: permitir DNS (53)
+resource "aws_network_acl_rule" "outbound_dns" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 200
+    egress         = true
+    protocol       = "tcp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 53
+    to_port        = 53
+}
+
+# Salida: permitir LDAP (389)
+resource "aws_network_acl_rule" "outbound_ldap" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 210
+    egress         = true
+    protocol       = "tcp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 389
+    to_port        = 389
+}
+
 # Salida: permitir ICMP
 resource "aws_network_acl_rule" "outbound_icmp" {
     network_acl_id = aws_network_acl.public_acl.id
-    rule_number    = 150
+    rule_number    = 220
     egress         = true
     protocol       = "icmp"
     rule_action    = "allow"
@@ -372,6 +540,22 @@ resource "aws_security_group" "ad_windows_access" {
         cidr_blocks = ["0.0.0.0/0"]
     }
 
+    ingress {
+        description = "LDAP access"
+        from_port   = 389
+        to_port     = 389
+        protocol    = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    ingress {
+        description = "DNS access"
+        from_port   = 53
+        to_port     = 53
+        protocol    = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
     egress {
         description = "Allow all outbound traffic"
         from_port   = 0
@@ -401,6 +585,38 @@ resource "aws_security_group" "radius_windows_access" {
         description = "RDP access"
         from_port   = 3389
         to_port     = 3389
+        protocol    = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    ingress {
+        description = "Radius Auth access"
+        from_port   = 1812
+        to_port     = 1812
+        protocol    = "udp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    ingress {
+        description = "Radius Account access"
+        from_port   = 1813
+        to_port     = 1813
+        protocol    = "udp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    ingress {
+        description = "DNS access"
+        from_port   = 53
+        to_port     = 53
+        protocol    = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    ingress {
+        description = "LDAP access"
+        from_port   = 389
+        to_port     = 389
         protocol    = "tcp"
         cidr_blocks = ["0.0.0.0/0"]
     }
@@ -637,13 +853,6 @@ resource "aws_autoscaling_group" "vpn_windows_asg" {
         create_before_destroy = true
     }
 }
-resource "aws_autoscaling_policy" "vpn_win_scale_up" {
-    name                   = "vpn-win-scale-up-${var.region}"
-    autoscaling_group_name = aws_autoscaling_group.vpn_windows_asg.name
-    scaling_adjustment     = 1
-    adjustment_type        = "ChangeInCapacity"
-    cooldown               = 300
-}
 #---------Windows AD Server------------
 resource "aws_autoscaling_group" "ad_windows_asg" {
     name                = "ad-windows-asg-${local.instance_name}"
@@ -678,13 +887,6 @@ resource "aws_autoscaling_group" "ad_windows_asg" {
         create_before_destroy = true
     }
 }
-resource "aws_autoscaling_policy" "ad_win_scale_up" {
-    name                   = "ad-win-scale-up-${var.region}"
-    autoscaling_group_name = aws_autoscaling_group.ad_windows_asg.name
-    scaling_adjustment     = 1
-    adjustment_type        = "ChangeInCapacity"
-    cooldown               = 300
-}
 #------------Windows Radius Server-------------
 resource "aws_autoscaling_group" "radius_windows_asg" {
     name                = "radius-windows-asg-${local.instance_name}"
@@ -717,196 +919,6 @@ resource "aws_autoscaling_group" "radius_windows_asg" {
 
     lifecycle {
         create_before_destroy = true
-    }
-}
-resource "aws_autoscaling_policy" "radius_win_scale_up" {
-    name                   = "radius-win-scale-up-${var.region}"
-    autoscaling_group_name = aws_autoscaling_group.radius_windows_asg.name
-    scaling_adjustment     = 1
-    adjustment_type        = "ChangeInCapacity"
-    cooldown               = 300
-}
-
-###############################################
-#            CloudWatch Dashboard             #
-###############################################
-resource "aws_cloudwatch_dashboard" "autodeployment_dashboard" {
-    depends_on = [ aws_instance.windows_control_node, aws_autoscaling_group.vpn_windows_asg,
-                    aws_autoscaling_group.radius_windows_asg,
-                    aws_autoscaling_group.ad_windows_asg ]
-
-    dashboard_name = "autodeployment-server-dashboard"
-    dashboard_body = jsonencode({
-        widgets = [
-            {
-                type    = "metric"
-                x       = 0
-                y       = 6
-                width   = 24
-                height  = 6
-
-                properties = {
-                    title   = "Windows-Control-Node Resource"
-                    region  = var.region
-                    stat    = "Average"
-                    period  = 300
-
-                    metrics = [
-                        [
-                            "AWS/EC2",
-                            "CPUUtilization",
-                            "InstanceId",
-                            "${aws_instance.windows_control_node.id}"
-                        ]
-                    ]
-                }
-            },
-            {
-                type    = "metric"
-                x       = 0
-                y       = 24
-                width   = 24
-                height  = 6
-
-                properties = {
-                    title   = "VPN-Windows-Server Resource"
-                    region  = var.region
-                    stat    = "Average"
-                    period  = 120
-
-                    metrics = [
-                        [
-                            "AWS/EC2",
-                            "CPUUtilization",
-                            "AutoScalingGroupName",
-                            "${aws_autoscaling_group.vpn_windows_asg.name}"
-                        ]
-                    ]
-                }
-            },
-            {
-                type    = "metric"
-                x       = 0
-                y       = 30
-                width   = 24
-                height  = 6
-
-                properties = {
-                    title   = "AD-Windows-Server Resource"
-                    region  = var.region
-                    stat    = "Average"
-                    period  = 120
-
-                    metrics = [
-                        [
-                            "AWS/EC2",
-                            "CPUUtilization",
-                            "AutoScalingGroupName",
-                            "${aws_autoscaling_group.ad_windows_asg.name}"
-                        ]
-                    ]
-                }
-            },
-            {
-                type    = "metric"
-                x       = 0
-                y       = 36
-                width   = 24
-                height  = 6
-
-                properties = {
-                    title   = "Radius-Windows-Server Resource"
-                    region  = var.region
-                    stat    = "Average"
-                    period  = 120
-
-                    metrics = [
-                        [
-                            "AWS/EC2",
-                            "CPUUtilization",
-                            "AutoScalingGroupName",
-                            "${aws_autoscaling_group.radius_windows_asg.name}"
-                        ]
-                    ]
-                }
-            }
-        ]
-    })
-}
-
-###############################################
-#          CloudWatch Alarm Instance          #
-###############################################
-# CPU Utilization >80%
-#------------Windows Control Node---------------
-resource "aws_cloudwatch_metric_alarm" "windows_control_node_alarm" {
-    alarm_description = "Monitoring CPU Utilization"
-    alarm_name          = "Windows-Control-Node"
-    namespace           = "AWS/EC2"
-    metric_name         = "CPUUtilization"
-    statistic           = "Average"
-    period              = 120
-    evaluation_periods  = 2
-    threshold           = 95
-    comparison_operator = "GreaterThanThreshold"
-
-    dimensions = {
-        InstanceId = aws_instance.windows_control_node.id
-    }
-}
-
-###############################################
-#           CloudWatch Alarm ASG              #
-###############################################
-#-----------Windows VPN Server-------------
-resource "aws_cloudwatch_metric_alarm" "vpn_windows_scale_prevention" {
-    alarm_description   = "Monitoring CPU utilization"
-    alarm_actions       = [aws_autoscaling_policy.vpn_win_scale_up.arn]
-    alarm_name          = "VPN-Win-CPU-Scale-Up-${local.instance_name}"
-    comparison_operator = "GreaterThanThreshold"
-    namespace           = "AWS/EC2"
-    evaluation_periods  = 2
-    metric_name         = "CPUUtilization"
-    threshold           = 95
-    period              = 120
-    statistic           = "Average"
-
-    dimensions = {
-        AutoScalingGroupName = aws_autoscaling_group.vpn_windows_asg.name
-    }
-}
-#----------Windows AD Server-------------
-resource "aws_cloudwatch_metric_alarm" "ad_windows_scale_prevention" {
-    alarm_description   = "Monitoring CPU utilization"
-    alarm_actions       = [aws_autoscaling_policy.ad_win_scale_up.arn]
-    alarm_name          = "AD-Win-CPU-Scale-Up-${local.instance_name}"
-    comparison_operator = "GreaterThanThreshold"
-    namespace           = "AWS/EC2"
-    evaluation_periods  = 2
-    metric_name         = "CPUUtilization"
-    threshold           = 95
-    period              = 120
-    statistic           = "Average"
-
-    dimensions = {
-        AutoScalingGroupName = aws_autoscaling_group.ad_windows_asg.name
-    }
-}
-#-----------Windows Radius Server-----------
-resource "aws_cloudwatch_metric_alarm" "radius_windows_scale_prevention" {
-    alarm_description   = "Monitoring CPU utilization"
-    alarm_actions       = [aws_autoscaling_policy.radius_win_scale_up.arn]
-    alarm_name          = "Radius-Win-CPU-Scale-Up-${local.instance_name}"
-    comparison_operator = "GreaterThanThreshold"
-    namespace           = "AWS/EC2"
-    evaluation_periods  = 2
-    metric_name         = "CPUUtilization"
-    threshold           = 95
-    period              = 120
-    statistic           = "Average"
-
-    dimensions = {
-        AutoScalingGroupName = aws_autoscaling_group.radius_windows_asg.name
     }
 }
 
