@@ -549,6 +549,14 @@ resource "aws_security_group" "ad_windows_access" {
     }
 
     ingress {
+        description = "SMB access"
+        from_port   = 445
+        to_port     = 445
+        protocol    = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    ingress {
         description = "DNS access"
         from_port   = 53
         to_port     = 53
