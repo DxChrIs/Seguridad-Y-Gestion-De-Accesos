@@ -34,6 +34,18 @@ resource "aws_subnet" "public_subnet1" {
         Name = "subnet-public-1-${var.region}"
     }
 }
+#############################################
+#             Private Subnet                #
+#############################################
+# Crear Subredes Privadas
+resource "aws_subnet" "private_subnet1" {
+    vpc_id            = aws_vpc.main.id
+    cidr_block        = "10.0.16.0/24"
+    availability_zone = "${var.region}a"
+    tags = {
+        Name = "subnet-private-1-${var.region}"
+    }
+}
 
 #############################################
 #            Internet Gateway               #
@@ -52,6 +64,7 @@ resource "aws_internet_gateway" "igw" {
 # Crear la Elastic IP
 resource "aws_eip" "nat_eip" {
     domain = "vpc"
+    address = "192.168.100.100"
     tags = {
         Name = "eip-nat-${var.region}a"
     }
@@ -84,13 +97,34 @@ resource "aws_route" "public_route" {
     route_table_id         = aws_route_table.public_route_table.id
     destination_cidr_block = "0.0.0.0/0"
     gateway_id             = aws_internet_gateway.igw.id
-    nat_gateway_id         = aws_nat_gateway.nat_gateway.id
 }
 
 # Asociar subredes públicas con la tabla de rutas públicas
 resource "aws_route_table_association" "public_subnet1_association" {
     subnet_id      = aws_subnet.public_subnet1.id
     route_table_id = aws_route_table.public_route_table.id
+}
+#############################################
+#            Private Route Table            #
+#############################################
+# Crear la tabla de rutas privadas para la subred privada 1
+resource "aws_route_table" "private_route_table_1" {
+    vpc_id = aws_vpc.main.id
+    tags = {
+        Name = "rtb-private-1-${var.region}a"
+    }
+}
+
+resource "aws_route" "private_route_1" {
+    route_table_id         = aws_route_table.private_route_table_1.id
+    destination_cidr_block = "0.0.0.0/0"
+    nat_gateway_id         = aws_nat_gateway.nat_gateway.id
+}
+
+# Asociar subred privada 1 con la tabla de rutas privadas 1
+resource "aws_route_table_association" "private_subnet1_association" {
+    subnet_id      = aws_subnet.private_subnet1.id
+    route_table_id = aws_route_table.private_route_table_1.id
 }
 
 #############################################
@@ -99,7 +133,7 @@ resource "aws_route_table_association" "public_subnet1_association" {
 resource "aws_network_acl" "public_acl" {
     vpc_id     = aws_vpc.main.id
     subnet_ids = [
-        aws_subnet.public_subnet1.id
+        aws_subnet.public_subnet1.id, aws_subnet.private_subnet1.id
     ]
     tags = {
         Name = "acl-public-${var.region}"
@@ -862,7 +896,7 @@ resource "aws_autoscaling_group" "vpn_windows_asg" {
     health_check_type   = "EC2"
     health_check_grace_period = 300
 
-    vpc_zone_identifier = [aws_subnet.public_subnet1.id]
+    vpc_zone_identifier = [aws_subnet.private_subnet1.id]
 
     launch_template {
         id      = aws_launch_template.vpn_windows_template.id
@@ -896,7 +930,7 @@ resource "aws_autoscaling_group" "ad_windows_asg" {
     health_check_type   = "EC2"
     health_check_grace_period = 300
 
-    vpc_zone_identifier = [aws_subnet.public_subnet1.id]
+    vpc_zone_identifier = [aws_subnet.private_subnet1.id]
 
     launch_template {
         id      = aws_launch_template.ad_windows_template.id
@@ -930,7 +964,7 @@ resource "aws_autoscaling_group" "radius_windows_asg" {
     health_check_type   = "EC2"
     health_check_grace_period = 300
 
-    vpc_zone_identifier = [aws_subnet.public_subnet1.id]
+    vpc_zone_identifier = [aws_subnet.private_subnet1.id]
 
     launch_template {
         id      = aws_launch_template.radius_windows_template.id
