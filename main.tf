@@ -47,6 +47,29 @@ resource "aws_internet_gateway" "igw" {
 }
 
 #############################################
+#               Elastic IP                  #
+#############################################
+# Crear la Elastic IP
+resource "aws_eip" "nat_eip" {
+    domain = "vpc"
+    tags = {
+        Name = "eip-nat-${var.region}a"
+    }
+}
+
+#############################################
+#               NAT Gateway                 #
+#############################################
+# Crear el NAT Gateway
+resource "aws_nat_gateway" "nat_gateway" {
+    allocation_id = aws_eip.nat_eip.id
+    subnet_id     = aws_subnet.public_subnet1.id
+    tags = {
+        Name = "nat-private-${var.region}"
+    }
+}
+
+#############################################
 #           Public Route Table              #
 #############################################
 # Crear la tabla de rutas públicas
@@ -61,6 +84,7 @@ resource "aws_route" "public_route" {
     route_table_id         = aws_route_table.public_route_table.id
     destination_cidr_block = "0.0.0.0/0"
     gateway_id             = aws_internet_gateway.igw.id
+    nat_gateway_id         = aws_nat_gateway.nat_gateway.id
 }
 
 # Asociar subredes públicas con la tabla de rutas públicas
