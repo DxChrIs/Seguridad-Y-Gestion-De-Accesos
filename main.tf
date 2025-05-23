@@ -34,18 +34,6 @@ resource "aws_subnet" "public_subnet1" {
         Name = "subnet-public-1-${var.region}"
     }
 }
-#############################################
-#             Private Subnet                #
-#############################################
-# Crear Subredes Privadas
-resource "aws_subnet" "private_subnet1" {
-    vpc_id            = aws_vpc.main.id
-    cidr_block        = "10.0.16.0/24"
-    availability_zone = "${var.region}a"
-    tags = {
-        Name = "subnet-private-1-${var.region}"
-    }
-}
 
 #############################################
 #            Internet Gateway               #
@@ -55,30 +43,6 @@ resource "aws_internet_gateway" "igw" {
     vpc_id = aws_vpc.main.id
     tags = {
         Name = "igw-${local.instance_name}"
-    }
-}
-
-#############################################
-#               Elastic IP                  #
-#############################################
-# Crear la Elastic IP
-resource "aws_eip" "nat_eip" {
-    domain = "vpc"
-    address = "192.168.100.100"
-    tags = {
-        Name = "eip-nat-${var.region}a"
-    }
-}
-
-#############################################
-#               NAT Gateway                 #
-#############################################
-# Crear el NAT Gateway
-resource "aws_nat_gateway" "nat_gateway" {
-    allocation_id = aws_eip.nat_eip.id
-    subnet_id     = aws_subnet.public_subnet1.id
-    tags = {
-        Name = "nat-private-${var.region}"
     }
 }
 
@@ -104,28 +68,6 @@ resource "aws_route_table_association" "public_subnet1_association" {
     subnet_id      = aws_subnet.public_subnet1.id
     route_table_id = aws_route_table.public_route_table.id
 }
-#############################################
-#            Private Route Table            #
-#############################################
-# Crear la tabla de rutas privadas para la subred privada 1
-resource "aws_route_table" "private_route_table_1" {
-    vpc_id = aws_vpc.main.id
-    tags = {
-        Name = "rtb-private-1-${var.region}a"
-    }
-}
-
-resource "aws_route" "private_route_1" {
-    route_table_id         = aws_route_table.private_route_table_1.id
-    destination_cidr_block = "0.0.0.0/0"
-    nat_gateway_id         = aws_nat_gateway.nat_gateway.id
-}
-
-# Asociar subred privada 1 con la tabla de rutas privadas 1
-resource "aws_route_table_association" "private_subnet1_association" {
-    subnet_id      = aws_subnet.private_subnet1.id
-    route_table_id = aws_route_table.private_route_table_1.id
-}
 
 #############################################
 #               Network ACL                 #
@@ -133,7 +75,7 @@ resource "aws_route_table_association" "private_subnet1_association" {
 resource "aws_network_acl" "public_acl" {
     vpc_id     = aws_vpc.main.id
     subnet_ids = [
-        aws_subnet.public_subnet1.id, aws_subnet.private_subnet1.id
+        aws_subnet.public_subnet1.id
     ]
     tags = {
         Name = "acl-public-${var.region}"
@@ -283,10 +225,46 @@ resource "aws_network_acl_rule" "inbound_ldap" {
     to_port        = 389
 }
 
+# Entrada: permitir OpenVPN 1 (1194)
+resource "aws_network_acl_rule" "inbound_openvpn_1" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 220
+    egress         = false
+    protocol       = "udp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 1194
+    to_port        = 1194
+}
+
+# Entrada: permitir OpenVPN 2 (943)
+resource "aws_network_acl_rule" "inbound_openvpn_2" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 230
+    egress         = false
+    protocol       = "tcp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 943
+    to_port        = 943
+}
+
+# Entrada: permitir OpenVPN (945)
+resource "aws_network_acl_rule" "inbound_openvpn_3" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 240
+    egress         = false
+    protocol       = "tcp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 945
+    to_port        = 945
+}
+
 # Entrada: permitir ICMP
 resource "aws_network_acl_rule" "inbound_icmp" {
     network_acl_id = aws_network_acl.public_acl.id
-    rule_number    = 220
+    rule_number    = 250
     egress         = false
     protocol       = "icmp"
     rule_action    = "allow"
@@ -439,10 +417,46 @@ resource "aws_network_acl_rule" "outbound_ldap" {
     to_port        = 389
 }
 
+# Salida: permitir OpenVPN 1 (1194)
+resource "aws_network_acl_rule" "outbound_openvpn_1" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 220
+    egress         = true
+    protocol       = "udp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 1194
+    to_port        = 1194
+}
+
+# Salida: permitir OpenVPN 2 (943)
+resource "aws_network_acl_rule" "outbound_openvpn_2" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 230
+    egress         = true
+    protocol       = "tcp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 943
+    to_port        = 943
+}
+
+# Salida: permitir OpenVPN (945)
+resource "aws_network_acl_rule" "outbound_openvpn_3" {
+    network_acl_id = aws_network_acl.public_acl.id
+    rule_number    = 240
+    egress         = true
+    protocol       = "tcp"
+    rule_action    = "allow"
+    cidr_block     = "0.0.0.0/0"
+    from_port      = 945
+    to_port        = 945
+}
+
 # Salida: permitir ICMP
 resource "aws_network_acl_rule" "outbound_icmp" {
     network_acl_id = aws_network_acl.public_acl.id
-    rule_number    = 220
+    rule_number    = 250
     egress         = true
     protocol       = "icmp"
     rule_action    = "allow"
@@ -484,6 +498,71 @@ resource "aws_security_group" "windows_access" {
         cidr_blocks = ["0.0.0.0/0"]
     }
     
+    ingress {
+        description = "ICMP access"
+        from_port   = -1
+        to_port     = -1
+        protocol    = "icmp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    egress {
+        description = "Allow all outbound traffic"
+        from_port   = 0
+        to_port     = 0
+        protocol    = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+    tags = {
+        Name = "sg-${local.instance_name}-windows"
+    }
+}
+#-----------OpenVPN Node-----------
+resource "aws_security_group" "openvpn_access" {
+    vpc_id      = aws_vpc.main.id
+    name        = "openvpn-${var.region}-sg"
+    description = "Allow SSH, HTTPS, access"
+
+    ingress {
+        description = "SSH access for Ansible playbooks"
+        from_port   = 22
+        to_port     = 22
+        protocol    = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    ingress {
+        description = "HTTPS access"
+        from_port   = 443
+        to_port     = 443
+        protocol    = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    ingress {
+        description = "OpenVPN access"
+        from_port   = 1194
+        to_port     = 1194
+        protocol    = "udp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    ingress {
+        description = "OpenVPN 2 access"
+        from_port   = 943
+        to_port     = 943
+        protocol    = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+    
+    ingress {
+        description = "OpenVPN 3 access"
+        from_port   = 945
+        to_port     = 945
+        protocol    = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
     ingress {
         description = "ICMP access"
         from_port   = -1
@@ -629,6 +708,7 @@ resource "aws_security_group" "ad_windows_access" {
         protocol    = "-1"
         cidr_blocks = ["0.0.0.0/0"]
     }
+
     tags = {
         Name = "ad-sg-${local.instance_name}-windows"
     }
@@ -750,6 +830,28 @@ resource "aws_instance" "windows_control_node" {
 
     tags = {
         Name = "windows-control-node-${local.instance_name}"
+    }
+}
+#-----------OpenVPN Node------------
+resource "aws_instance" "openvpn_node" {
+    ami = var.openvpn_ami
+    instance_type = "t2.micro"
+    key_name = var.key_name
+
+    subnet_id = aws_subnet.public_subnet1.id
+    security_groups = [aws_security_group.openvpn_access.id]
+    associate_public_ip_address = true
+
+    root_block_device {
+        volume_size = 20
+        volume_type = "gp2"
+        encrypted   = true
+    }
+
+    iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
+
+    tags = {
+        Name = "openvpn-node-${local.instance_name}"
     }
 }
 #-------------Windows VPN Server--------------
@@ -896,7 +998,7 @@ resource "aws_autoscaling_group" "vpn_windows_asg" {
     health_check_type   = "EC2"
     health_check_grace_period = 300
 
-    vpc_zone_identifier = [aws_subnet.private_subnet1.id]
+    vpc_zone_identifier = [aws_subnet.public_subnet1.id]
 
     launch_template {
         id      = aws_launch_template.vpn_windows_template.id
@@ -930,7 +1032,7 @@ resource "aws_autoscaling_group" "ad_windows_asg" {
     health_check_type   = "EC2"
     health_check_grace_period = 300
 
-    vpc_zone_identifier = [aws_subnet.private_subnet1.id]
+    vpc_zone_identifier = [aws_subnet.public_subnet1.id]
 
     launch_template {
         id      = aws_launch_template.ad_windows_template.id
@@ -964,7 +1066,7 @@ resource "aws_autoscaling_group" "radius_windows_asg" {
     health_check_type   = "EC2"
     health_check_grace_period = 300
 
-    vpc_zone_identifier = [aws_subnet.private_subnet1.id]
+    vpc_zone_identifier = [aws_subnet.public_subnet1.id]
 
     launch_template {
         id      = aws_launch_template.radius_windows_template.id
